@@ -154,6 +154,10 @@
         <button id="leave-shop">Leave Shop</button>
     </div>
     <canvas id="canvas" width="720" height="480" style="width: auto;"></canvas>
+    <button style="background-color: #0a6354; border: none; border-radius: 5px; color: white; padding: 2px 4px; cursor: pointer; font: inherit; font-size: x-small; display: block;"
+        onclick="confirm('Are you sure you want to clear your save? This cannot be undone.') && (localStorage.setItem('clear', 'true') || location.reload())">
+        Clear Save
+    </button>
     <script>
         const canvas = document.getElementById('canvas');
         /** @type {CanvasRenderingContext2D} */
@@ -174,6 +178,7 @@
                 coins: 0,
                 purchases: [],
             },
+            level: 1,
         }
 
         const settings = {
@@ -215,10 +220,14 @@
             saveData();
         }, 5000);
 
+        if (localStorage.getItem('clear')) {
+            localStorage.clear();
+        }
+
         loadData()
 
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
+            if (document.hidden && !localStorage.getItem('clear')) {
                 saveData();
             }
         });
@@ -1048,7 +1057,6 @@
 
         loaded.then(() => {
             document.getElementById('loading').hidden = true;
-            player.level++;
             generateLevel(currentLevelSize(player.level));
             render();
         });
