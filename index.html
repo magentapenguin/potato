@@ -168,7 +168,7 @@
     <script>
         const canvas = document.getElementById('canvas');
         /** @type {CanvasRenderingContext2D} */
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
         const player = {
             x: 2.5,
@@ -186,7 +186,7 @@
                 purchases: [],
             },
             level: 1,
-            observedCells: [],
+            observedCells: new Set(),
         }
 
         const settings = {
@@ -202,6 +202,12 @@
         let level = [];
 
         let loading = []
+
+        // Cached game state for per-frame lookups
+        let cachedSprites = [];
+        let cachedExitPos = null;
+        let cachedKeyPos = null;
+        let cachedCoinCount = 0;
 
         let wallTextureData = null;
         loadTexture('wall.png').then((data) => {
@@ -282,7 +288,7 @@
 
         function saveData() {
             const save = {
-                player,
+                player: { ...player, observedCells: [...player.observedCells] },
                 settings,
                 level,
             };
@@ -290,15 +296,17 @@
         }
 
         function loadData(source) {
-            if (!localStorage.getItem('mazeSave')) {
-                return;
-            }
             if (source) {
                 const data = JSON.parse(source);
-                Object.assign(player, data.save.player);
-                Object.assign(settings, data.save.settings);
-                level = data.save.level;
+                Object.assign(player, data.player);
+                Object.assign(settings, data.settings);
+                level = data.level;
+                player.observedCells = new Set(player.observedCells);
                 document.getElementById('mouse-sensitivity').value = settings.mouseSensitivity;
+                rebuildCaches();
+                return;
+            }
+            if (!localStorage.getItem('mazeSave')) {
                 return;
             }
             const save = JSON.parse(localStorage.getItem('mazeSave'));
@@ -306,7 +314,9 @@
                 Object.assign(player, save.player);
                 Object.assign(settings, save.settings);
                 level = save.level;
+                player.observedCells = new Set(player.observedCells);
                 document.getElementById('mouse-sensitivity').value = settings.mouseSensitivity;
+                rebuildCaches();
             }
         }
 
@@ -647,8 +657,37 @@
             }
         }
 
+
+        function rebuildCaches() {
+            cachedSprites = [];
+            cachedExitPos = null;
+            cachedKeyPos = null;
+            cachedCoinCount = 0;
+            for (let y = 0; y < level.length; y++) {
+                for (let x = 0; x < level[y].length; x++) {
+                    const cell = level[y][x];
+                    if (cell === '*') {
+                        cachedSprites.push({ x: x + 0.5, y: y + 0.5, type: cell });
+                        cachedCoinCount++;
+                    } else if (cell === '.') {
+                        cachedSprites.push({ x: x + 0.5, y: y + 0.5, type: cell });
+                        cachedKeyPos = { x: x + 0.5, y: y + 0.5 };
+                    } else if (cell === '=') {
+                        cachedExitPos = { x: x + 0.5, y: y + 0.5 };
+                    }
+                }
+            }
+        }
+
+        function removeSpriteAt(gridX, gridY) {
+            const cell = level[gridY][gridX];
+            if (cell === '*') cachedCoinCount--;
+            if (cell === '.') cachedKeyPos = null;
+            cachedSprites = cachedSprites.filter(s => !(Math.floor(s.x) === gridX && Math.floor(s.y) === gridY));
+        }
+
         function generateLevel(size = 10) {
-            player.observedCells = [];
+            player.observedCells = new Set();
             console.log('Generating level with size:', size, currentLevelSize(player.level));
             const mazeBuilder = new MazeBuilder(size, size);
             mazeBuilder.placeKey();
@@ -668,55 +707,78 @@
                     return ' ';
                 }
             }));
-            levelPostProcessing()
+            levelPostProcessing();
+            rebuildCaches();
         }
 
         function raycast(x, y, angle, options = {}) {
             const { maxDistance = 100, ignore = " @", check = (obj,x,y,dist)=>true } = options;
-            const stepSize = 0.01;
+
+            const dirX = Math.cos(angle);
+            const dirY = Math.sin(angle);
+
+            let mapX = Math.floor(x);
+            let mapY = Math.floor(y);
+
+            // Epsilon for near-zero direction detection; 1e10 acts as infinite distance for axis-parallel rays
+            const deltaDistX = Math.abs(dirX) < 1e-10 ? 1e10 : Math.abs(1 / dirX);
+            const deltaDistY = Math.abs(dirY) < 1e-10 ? 1e10 : Math.abs(1 / dirY);
+
+            let stepX, stepY;
+            let sideDistX, sideDistY;
+
+            if (dirX < 0) {
+                stepX = -1;
+                sideDistX = (x - mapX) * deltaDistX;
+            } else {
+                stepX = 1;
+                sideDistX = (mapX + 1 - x) * deltaDistX;
+            }
+            if (dirY < 0) {
+                stepY = -1;
+                sideDistY = (y - mapY) * deltaDistY;
+            } else {
+                stepY = 1;
+                sideDistY = (mapY + 1 - y) * deltaDistY;
+            }
+
             let distance = 0;
-
             while (distance < maxDistance) {
-                const rayX = x + Math.cos(angle) * distance;
-                const rayY = y + Math.sin(angle) * distance;
+                if (sideDistX < sideDistY) {
+                    distance = sideDistX;
+                    sideDistX += deltaDistX;
+                    mapX += stepX;
+                } else {
+                    distance = sideDistY;
+                    sideDistY += deltaDistY;
+                    mapY += stepY;
+                }
 
-                const gridX = Math.floor(rayX);
-                const gridY = Math.floor(rayY);
-
-                // Explicit bounds checking instead of try/catch for performance
-                if (
-                    gridY < 0 ||
-                    gridY >= level.length ||
-                    gridX < 0 ||
-                    gridX >= level[gridY].length
-                ) {
-                    // Out of bounds, treat as max distance
+                if (distance >= maxDistance) {
                     return [maxDistance, null];
                 }
 
-                const cell = level[gridY][gridX];
-                if (cell && check(cell, rayX, rayY, distance) && !ignore.includes(cell)) {
+                if (
+                    mapY < 0 ||
+                    mapY >= level.length ||
+                    mapX < 0 ||
+                    mapX >= level[mapY].length
+                ) {
+                    return [maxDistance, null];
+                }
+
+                const cell = level[mapY][mapX];
+                if (cell && check(cell, mapX + 0.5, mapY + 0.5, distance) && !ignore.includes(cell)) {
                     return [distance, cell];
                 }
-                distance += stepSize;
             }
 
-            return [distance, null];
+            return [maxDistance, null];
         }
 
-        // Find all keys in the level and render them as billboard sprites
+        // Use cached sprites instead of scanning level every frame
         function findSprites() {
-            const sprites = [];
-            for (let y = 0; y < level.length; y++) {
-                for (let x = 0; x < level[y].length; x++) {
-                    if (level[y][x] === '.') {
-                        sprites.push({ x: x + 0.5, y: y + 0.5, type: '.' });
-                    } else if (level[y][x] === '*') {
-                        sprites.push({ x: x + 0.5, y: y + 0.5, type: '*' });
-                    }
-                }
-            }
-            return sprites;
+            return cachedSprites;
         }
 
         function renderSprites(pixels, depthBuffer, playerX, playerY, playerAngle) {
@@ -798,9 +860,7 @@
         }
         
         function observe(x,y) {
-            if (!player.observedCells.includes(`${Math.floor(x)},${Math.floor(y)}`)) {
-                player.observedCells.push(`${Math.floor(x)},${Math.floor(y)}`);
-            }
+            player.observedCells.add(`${Math.floor(x)},${Math.floor(y)}`);
         }
 
         function render() {
@@ -924,7 +984,7 @@
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
                 for (let y = 0; y < level.length; y++) {
                     for (let x = 0; x < level[y].length; x++) {
-                        if (!player.observedCells.includes(`${x},${y}`)) {
+                        if (!player.observedCells.has(`${x},${y}`)) {
                             continue;
                         }
                         if (level[y][x] === '#' || level[y][x] === '+') {
@@ -975,43 +1035,24 @@
                     ctx.fillText(directions[i], x - 8, y + 5);
                 }
                 if (player.inventory.purchases.includes('Exit Tracker')) {
-                    // Find the exit and point to it
-                    let exitX = 0;
-                    let exitY = 0;
-                    for (let y = 0; y < level.length; y++) {
-                        for (let x = 0; x < level[y].length; x++) {
-                            if (level[y][x] === '=') {
-                                exitX = x + 0.5;
-                                exitY = y + 0.5;
-                            }
-                        }
-                    }
-                    const dx = exitX - player.x;
-                    const dy = exitY - player.y;
-                    const angleToExit = Math.atan2(dy, dx) - player.angle - Math.PI / 2;
+                    // Use cached exit position
+                    if (cachedExitPos) {
+                        const dx = cachedExitPos.x - player.x;
+                        const dy = cachedExitPos.y - player.y;
+                        const angleToExit = Math.atan2(dy, dx) - player.angle - Math.PI / 2;
 
-                    ctx.strokeStyle = 'lime';
-                    ctx.lineWidth = 3;
-                    ctx.beginPath();
-                    ctx.moveTo(canvas.width / 2 + Math.cos(angleToExit + Math.PI) * 60, Math.sin(angleToExit + Math.PI) * 30);
-                    ctx.lineTo(canvas.width / 2 + Math.cos(angleToExit) * 120, Math.sin(angleToExit) * 60);
-                    ctx.stroke();
+                        ctx.strokeStyle = 'lime';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.moveTo(canvas.width / 2 + Math.cos(angleToExit + Math.PI) * 60, Math.sin(angleToExit + Math.PI) * 30);
+                        ctx.lineTo(canvas.width / 2 + Math.cos(angleToExit) * 120, Math.sin(angleToExit) * 60);
+                        ctx.stroke();
+                    }
                 }
                 if (player.inventory.purchases.includes('Keyfinder')) {
-                    if (level.some(row => row.includes('.'))) {
-                        // Find the key and point to it
-                        let keyX = 0;
-                        let keyY = 0;
-                        for (let y = 0; y < level.length; y++) {
-                            for (let x = 0; x < level[y].length; x++) {
-                                if (level[y][x] === '.') {
-                                    keyX = x + 0.5;
-                                    keyY = y + 0.5;
-                                }
-                            }
-                        }
-                        const dx = keyX - player.x;
-                        const dy = keyY - player.y;
+                    if (cachedKeyPos) {
+                        const dx = cachedKeyPos.x - player.x;
+                        const dy = cachedKeyPos.y - player.y;
                         const angleToKey = Math.atan2(dy, dx) - player.angle - Math.PI / 2;
 
                         ctx.strokeStyle = 'yellow';
@@ -1036,8 +1077,7 @@
 
             ctx.textAlign = 'right';
             if (player.inventory.purchases.includes('Coin Radar')) {
-                const coinCount = level.reduce((count, row) => count + row.filter(cell => cell === '*').length, 0);
-                ctx.fillText(`Coins in level: ${coinCount}`, canvas.width - 10, 26);
+                ctx.fillText(`Coins in level: ${cachedCoinCount}`, canvas.width - 10, 26);
             }
 
             ctx.textAlign = 'center';
@@ -1329,6 +1369,7 @@
             const keyHits = isColliding(player.x, player.y, player.size, player.size, '.');
             if (keyHits) {
                 for (const key of keyHits) {
+                    removeSpriteAt(key.x, key.y);
                     level[key.y][key.x] = ' ';
                     player.inventory.key++;
                     console.log('Key collected! Total:', player.inventory.key);
@@ -1338,6 +1379,7 @@
             const coinHits = isColliding(player.x, player.y, player.size, player.size, '*');
             if (coinHits) {
                 for (const coin of coinHits) {
+                    removeSpriteAt(coin.x, coin.y);
                     level[coin.y][coin.x] = ' ';
                     player.inventory.coins++;
                     console.log('Coin collected! Total:', player.inventory.coins);
