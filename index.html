@@ -1270,7 +1270,7 @@
         }
 
         function update(deltaTime) {
-            if (!level) return;
+            if (level.length < 1) return;
             if (player.x < 0 || player.y < 0 || player.x >= level[0].length || player.y >= level.length) {
                 // Out of bounds, reset to center
                 player.x = level[0].length / 2;
