@@ -174,7 +174,6 @@
                 coins: 0,
                 purchases: [],
             },
-            level: 0
         }
 
         const settings = {
@@ -226,7 +225,9 @@
 
         function saveData() {
             const save = {
-                player,
+                player: {
+                    inventory: player.inventory,
+                },
                 settings,
             };
             
