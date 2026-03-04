@@ -144,6 +144,12 @@
         onclick="document.getElementById('settings-menu').hidden = true">
             Close
         </button>
+        <button style="background-color: #0a6354; border: none; border-radius: 5px; color: white; padding: 5px 10px; cursor: pointer; font: inherit;" id="export-save">
+            Export Save
+        </button>
+        <button style="background-color: #0a6354; border: none; border-radius: 5px; color: white; padding: 5px 10px; cursor: pointer; font: inherit;" id="import-save">
+            Import Save
+        </button>
     </div>
     <div id="shop"
         style="position: absolute; inset: 0; overflow-y: auto; background-color: black; padding: 10px; color: white;"
@@ -179,6 +185,7 @@
                 purchases: [],
             },
             level: 1,
+            observedCells: [],
         }
 
         const settings = {
@@ -189,6 +196,9 @@
         document.getElementById('mouse-sensitivity').addEventListener('input', (e) => {
             settings.mouseSensitivity = parseFloat(e.target.value);
         });
+        
+
+        let level = [];
 
         let loading = []
 
@@ -232,46 +242,70 @@
             }
         });
 
+        document.getElementById('export-save').addEventListener('click', exportSave);
+        document.getElementById('import-save').addEventListener('click', importSave);
+
+        function exportSave() {
+            saveData();
+            const blob = new Blob([localStorage.getItem('mazeSave')], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'maze_save.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function importSave() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = event => {
+                    try {
+                        loadData(event.target.result);
+                    } catch (err) {
+                        alert('Error loading save: ' + err.message);
+                    }
+                    input.remove();
+                };
+                reader.readAsText(file);
+
+            };
+            input.click();
+            input.hidden = true;
+        }
+
         function saveData() {
             const save = {
                 player,
                 settings,
                 level,
             };
-            
-            crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(save))).then(hashBuffer => {
-                const hashArray = Array.from(new Uint8Array(hashBuffer));
-                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                localStorage.setItem('storedKey', hashHex);
-            });
             localStorage.setItem('mazeSave', JSON.stringify(save));
         }
 
-        function loadData() {
+        function loadData(source) {
             if (!localStorage.getItem('mazeSave')) {
+                return;
+            }
+            if (source) {
+                const data = JSON.parse(source);
+                Object.assign(player, data.save.player);
+                Object.assign(settings, data.save.settings);
+                level = data.save.level;
+                document.getElementById('mouse-sensitivity').value = settings.mouseSensitivity;
                 return;
             }
             const save = JSON.parse(localStorage.getItem('mazeSave'));
             if (save) {
-                if (!localStorage.getItem('storedKey')) {
-                    alert('Save data is corrupted.');
-                    localStorage.removeItem('mazeSave');
-                    localStorage.removeItem('storedKey');
-                    return;
-                }
-                crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(save))).then(hashBuffer => {
-                    const hashArray = Array.from(new Uint8Array(hashBuffer));
-                    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                    if (hashHex !== localStorage.getItem('storedKey')) {
-                        alert('Error loading save.');
-                        return;
-                    } else {
-                        Object.assign(player, save.player);
-                        Object.assign(settings, save.settings);
-                        level = save.level;
-                        document.getElementById('mouse-sensitivity').value = settings.mouseSensitivity;
-                    }
-                });
+                Object.assign(player, save.player);
+                Object.assign(settings, save.settings);
+                level = save.level;
+                document.getElementById('mouse-sensitivity').value = settings.mouseSensitivity;
             }
         }
 
@@ -604,8 +638,6 @@
             alerts.push({ text, expires: performance.now() + duration });
         }
 
-        let level = [];
-
         function currentLevelSize(x) {
             if (x > 5) {
                 return Math.floor(Math.pow(x, 0.8) + 1) + 2
@@ -615,6 +647,7 @@
         }
 
         function generateLevel(size = 10) {
+            player.observedCells = [];
             console.log('Generating level with size:', size, currentLevelSize(player.level));
             const mazeBuilder = new MazeBuilder(size, size);
             mazeBuilder.placeKey();
@@ -638,7 +671,7 @@
         }
 
         function raycast(x, y, angle, options = {}) {
-            const { maxDistance = 100, ignore = " @" } = options;
+            const { maxDistance = 100, ignore = " @", check = (obj,x,y,dist)=>true } = options;
             const stepSize = 0.01;
             let distance = 0;
 
@@ -661,7 +694,7 @@
                 }
 
                 const cell = level[gridY][gridX];
-                if (cell && !ignore.includes(cell)) {
+                if (cell && check(cell, rayX, rayY, distance) && !ignore.includes(cell)) {
                     return [distance, cell];
                 }
                 distance += stepSize;
@@ -762,6 +795,12 @@
                 }
             }
         }
+        
+        function observe(x,y) {
+            if (!player.observedCells.includes(`${Math.floor(x)},${Math.floor(y)}`)) {
+                player.observedCells.push(`${Math.floor(x)},${Math.floor(y)}`);
+            }
+        }
 
         function render() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -783,7 +822,11 @@
                 const rayAngle = playerAngle + ((x / canvas.width) - 0.5) * (Math.PI / 3);
                 const rayX = playerX;
                 const rayY = playerY;
-                const [distance, object] = raycast(rayX, rayY, rayAngle, { ignore: " @.*" });
+                const [distance, object] = raycast(rayX, rayY, rayAngle, { ignore: " @.*", check: (obj, x, y, dist) => {
+                    // Mark observed cells for minimap
+                    observe(x, y);
+                    return true;
+                } });
                 raycastResults.push([rayAngle, distance, rayX, rayY]);
 
                 // Fix fisheye distortion by using perpendicular distance
@@ -792,6 +835,8 @@
 
                 const rayHitX = rayX + Math.cos(rayAngle) * distance;
                 const rayHitY = rayY + Math.sin(rayAngle) * distance;
+
+                observe(rayHitX, rayHitY);
 
                 const wallHeight = canvas.height / (correctedDistance + 0.01) * 1.5;
 
@@ -878,7 +923,10 @@
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
                 for (let y = 0; y < level.length; y++) {
                     for (let x = 0; x < level[y].length; x++) {
-                        if (level[y][x] === '#') {
+                        if (!player.observedCells.includes(`${x},${y}`)) {
+                            continue;
+                        }
+                        if (level[y][x] === '#' || level[y][x] === '+') {
                             ctx.fillRect(x * scale, y * scale, scale, scale);
                         } else if (level[y][x] === '=') {
                             ctx.fillStyle = 'rgba(50, 255, 128, 0.5)';
@@ -924,6 +972,29 @@
                     const x = canvas.width / 2 + Math.cos(angle) * 100;
                     const y = Math.sin(angle) * 50;
                     ctx.fillText(directions[i], x - 8, y + 5);
+                }
+                if (player.inventory.purchases.includes('Exit Tracker')) {
+                    // Find the exit and point to it
+                    let exitX = 0;
+                    let exitY = 0;
+                    for (let y = 0; y < level.length; y++) {
+                        for (let x = 0; x < level[y].length; x++) {
+                            if (level[y][x] === '=') {
+                                exitX = x + 0.5;
+                                exitY = y + 0.5;
+                            }
+                        }
+                    }
+                    const dx = exitX - player.x;
+                    const dy = exitY - player.y;
+                    const angleToExit = Math.atan2(dy, dx) - player.angle - Math.PI / 2;
+
+                    ctx.strokeStyle = 'lime';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(canvas.width / 2 + Math.cos(angleToExit + Math.PI) * 60, Math.sin(angleToExit + Math.PI) * 30);
+                    ctx.lineTo(canvas.width / 2 + Math.cos(angleToExit) * 120, Math.sin(angleToExit) * 60);
+                    ctx.stroke();
                 }
                 if (player.inventory.purchases.includes('Keyfinder')) {
                     if (level.some(row => row.includes('.'))) {
@@ -994,8 +1065,10 @@
             const items = [
                 { name: 'Extra Key', desc: 'Gives you an extra key', cost: 25, effect: () => player.inventory.key++ },
                 { name: 'Compass', desc: 'Displays a compass at the top of the screen', once: true, cost: 2, effect: null }, // happens in rendering
-                { name: 'Keyfinder', desc: 'Shows where the key is', once: true, cost: 15, effect: null, requires: ['Compass'] },
+                { name: 'Keyfinder', desc: 'Shows the direction of the key', once: true, cost: 15, effect: null, requires: ['Compass'] },
                 { name: 'Coin Radar', desc: 'Shows how many coins are on the current map', once: true, cost: 10, effect: null },
+                { name: 'Exit Tracker', desc: 'Shows the direction of the exit', once: true, cost: 20, effect: null, requires: ['Compass'] },
+                { name: 'Minimap', desc: 'Shows a minimap of explored areas in the top-left corner', once: true, cost: 5, effect: () => player.minimap = true },
             ];
             items.sort((a, b) => {
                 const aAffordable = player.inventory.coins >= a.cost && (!a.once || !player.inventory.purchases.includes(a.name)) && (!a.requires || a.requires.every(req => player.inventory.purchases.includes(req)));
@@ -1058,6 +1131,11 @@
             document.getElementById('loading').hidden = true;
             if (level.length === 0) generateLevel(currentLevelSize(player.level));
             render();
+            if (player.in_shop) {
+                shop().then(() => {
+                    if (level.length === 0) generateLevel(currentLevelSize(player.level));
+                });
+            }
         });
 
         let keyState = {};
@@ -1192,6 +1270,12 @@
         }
 
         function update(deltaTime) {
+            if (!level) return;
+            if (player.x < 0 || player.y < 0 || player.x >= level[0].length || player.y >= level.length) {
+                // Out of bounds, reset to center
+                player.x = level[0].length / 2;
+                player.y = level.length / 2;
+            }
             if (player.in_shop || !level) return; // disable movement while in shop
             let moveSpeed = 2;
             const rotSpeed = 1.5;
@@ -1216,10 +1300,10 @@
             if (keyState['arrowright']) {
                 player.angle += rotSpeed * deltaTime;
             }
-            /*if (keyState['m']) {
+            if (keyState['m'] && player.inventory.purchases.includes('Minimap')) {
                 player.minimap = !player.minimap;
                 keyState['m'] = false;
-            }*/
+            }
 
             // Calculate desired new position
             const dx = (player.vx * Math.cos(player.angle) - player.vy * Math.sin(player.angle)) * deltaTime;
