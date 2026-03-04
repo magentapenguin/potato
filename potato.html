@@ -234,11 +234,9 @@
 
         function saveData() {
             const save = {
-                player: {
-                    inventory: player.inventory,
-                    level: player.level,
-                },
+                player,
                 settings,
+                level,
             };
             
             crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(save))).then(hashBuffer => {
@@ -270,6 +268,7 @@
                     } else {
                         Object.assign(player, save.player);
                         Object.assign(settings, save.settings);
+                        level = save.level;
                         document.getElementById('mouse-sensitivity').value = settings.mouseSensitivity;
                     }
                 });
@@ -1057,7 +1056,7 @@
 
         loaded.then(() => {
             document.getElementById('loading').hidden = true;
-            generateLevel(currentLevelSize(player.level));
+            if (level.length === 0) generateLevel(currentLevelSize(player.level));
             render();
         });
 
@@ -1193,7 +1192,7 @@
         }
 
         function update(deltaTime) {
-            if (player.in_shop) return; // disable movement while in shop
+            if (player.in_shop || !level) return; // disable movement while in shop
             let moveSpeed = 2;
             const rotSpeed = 1.5;
             if (keyState['shift']) {
