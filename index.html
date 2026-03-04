@@ -295,17 +295,17 @@
         }
 
         function loadData(source) {
-            if (!localStorage.getItem('mazeSave')) {
-                return;
-            }
             if (source) {
                 const data = JSON.parse(source);
-                Object.assign(player, data.save.player);
-                Object.assign(settings, data.save.settings);
-                level = data.save.level;
+                Object.assign(player, data.player);
+                Object.assign(settings, data.settings);
+                level = data.level;
                 player.observedCells = new Set(player.observedCells);
                 document.getElementById('mouse-sensitivity').value = settings.mouseSensitivity;
                 rebuildCaches();
+                return;
+            }
+            if (!localStorage.getItem('mazeSave')) {
                 return;
             }
             const save = JSON.parse(localStorage.getItem('mazeSave'));
@@ -743,17 +743,18 @@
 
             let distance = 0;
             while (distance < maxDistance) {
-                let side;
                 if (sideDistX < sideDistY) {
                     distance = sideDistX;
                     sideDistX += deltaDistX;
                     mapX += stepX;
-                    side = 0;
                 } else {
                     distance = sideDistY;
                     sideDistY += deltaDistY;
                     mapY += stepY;
-                    side = 1;
+                }
+
+                if (distance >= maxDistance) {
+                    return [maxDistance, null];
                 }
 
                 if (
