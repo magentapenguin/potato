@@ -46,7 +46,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            flex: 1;
+            flex: 0 1 auto; /* Allow to shrink but not grow, so it doesn't take up all space and push the leave button down */
             width: 100%;
         }
 
@@ -175,6 +175,7 @@
             y: 2.5,
             angle: 0,
             size: 0.5,
+            speedBoost: 0,
             vx: 0,
             vy: 0,
             paused: false,
@@ -233,6 +234,9 @@
             coinTextureData = data;
         });
 
+        
+        const currentSaveVersion = 1;
+
         setInterval(() => {
             saveData();
         }, 5000);
@@ -251,6 +255,49 @@
 
         document.getElementById('export-save').addEventListener('click', exportSave);
         document.getElementById('import-save').addEventListener('click', importSave);
+
+
+        function migrateOldSave(data, version) {
+            const migrations = {
+                "0>1": (old) => {
+                    old.player.purchases = old.player.purchases.filter(p => p !== "Minimap");
+                    old.version = 1;
+                    return old;
+                },
+            }
+            const key = `${version}>${currentSaveVersion}`;
+            if (migrations[key]) {
+                return migrations[key](data);
+            } else {
+                // Find a path of migrations to apply
+                const visited = new Set();
+                function findPath(v) {
+                    if (v === currentSaveVersion) return [];
+                    if (visited.has(v)) return null;
+                    visited.add(v);
+                    for (const k in migrations) {
+                        const [from, to] = k.split('>').map(Number);
+                        if (from === v) {
+                            const path = findPath(to);
+                            if (path !== null) {
+                                return [k, ...path];
+                            }
+                        }
+                    }
+                    return null;
+                }
+                const path = findPath(version);
+                if (path) {
+                    let migratedData = data;
+                    for (const step of path) {
+                        migratedData = migrations[step](migratedData);
+                    }
+                    return migratedData;
+                } else {
+                    throw new Error(`Cannot migrate save from version ${version} to ${currentSaveVersion}`);
+                }
+            }
+        }
 
         function exportSave() {
             saveData();
@@ -291,6 +338,7 @@
                 player: { ...player, observedCells: [...player.observedCells] },
                 settings,
                 level,
+                version: currentSaveVersion,
             };
             localStorage.setItem('mazeSave', JSON.stringify(save));
         }
@@ -311,6 +359,9 @@
             }
             const save = JSON.parse(localStorage.getItem('mazeSave'));
             if (save) {
+                if (save.version < currentSaveVersion) {
+                    migrateOldSave(save, save.version ?? 0);
+                }
                 Object.assign(player, save.player);
                 Object.assign(settings, save.settings);
                 level = save.level;
@@ -645,6 +696,8 @@
 
         let alerts = [];
 
+
+        // future feature: show alert text in the 3D view for a short duration when something important happens (like picking up a coin or key)
         function showAlert(text, duration = 2000) {
             alerts.push({ text, expires: performance.now() + duration });
         }
@@ -1105,15 +1158,16 @@
             document.getElementById('shop').hidden = false;
             const items = [
                 { name: 'Extra Key', desc: 'Gives you an extra key', cost: 25, effect: () => player.inventory.key++ },
-                { name: 'Compass', desc: 'Displays a compass at the top of the screen', once: true, cost: 2, effect: null }, // happens in rendering
-                { name: 'Keyfinder', desc: 'Shows the direction of the key', once: true, cost: 15, effect: null, requires: ['Compass'] },
-                { name: 'Coin Radar', desc: 'Shows how many coins are on the current map', once: true, cost: 10, effect: null },
-                { name: 'Exit Tracker', desc: 'Shows the direction of the exit', once: true, cost: 20, effect: null, requires: ['Compass'] },
-                { name: 'Minimap', desc: 'Shows a minimap of explored areas in the top-left corner', once: true, cost: 12, effect: () => player.minimap = true },
+                { name: 'Compass', desc: 'Displays a compass at the top of the screen', count: 1, cost: 2, effect: null }, // happens in rendering
+                { name: 'Keyfinder', desc: 'Shows the direction of the key', count: 1, cost: 15, effect: null, requires: ['Compass'] },
+                { name: 'Coin Radar', desc: 'Shows how many coins are on the current map', count: 1, cost: 10, effect: null },
+                { name: 'Exit Tracker', desc: 'Shows the direction of the exit', count: 1, cost: 20, effect: null, requires: ['Compass'] },
+                { name: 'Minimap', desc: 'Shows a minimap of explored areas in the top-left corner', count: 1, cost: 35, effect: () => player.minimap = true },
+                { name: 'Speed Boost', desc: 'Increases your movement speed', cost: 15, count: 3, effect: () => player.speedBoost += 0.5 },
             ];
             items.sort((a, b) => {
-                const aAffordable = player.inventory.coins >= a.cost && (!a.once || !player.inventory.purchases.includes(a.name)) && (!a.requires || a.requires.every(req => player.inventory.purchases.includes(req)));
-                const bAffordable = player.inventory.coins >= b.cost && (!b.once || !player.inventory.purchases.includes(b.name)) && (!b.requires || b.requires.every(req => player.inventory.purchases.includes(req)));
+                let aAffordable = player.inventory.coins >= a.cost && (!a.requires || a.requires.every(req => player.inventory.purchases.includes(req))) && (!a.count || (player.inventory.purchases.filter(p => p === a.name).length < a.count));
+                let bAffordable = player.inventory.coins >= b.cost && (!b.requires || b.requires.every(req => player.inventory.purchases.includes(req))) && (!b.count || (player.inventory.purchases.filter(p => p === b.name).length < b.count));
                 if (aAffordable && !bAffordable) {
                     return -1;
                 } else if (!aAffordable && bAffordable) {
@@ -1130,12 +1184,23 @@
                 items.forEach((item, index) => {
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'shop-item';
-                    itemDiv.innerHTML = `<div><strong>${item.name}${player.inventory.purchases.includes(item.name) ? ' (Purchased)' : ''}</strong> <span style="opacity:0.8">${item.requires ? `Requires ${item.requires.join(', ')}` : ''}</span> ${item.desc} <span style="float:right;">${item.cost} coins</span></div> <button>Buy</button>`;
+                    itemDiv.innerHTML = `<div><strong>${item.name}${item?.count && player.inventory.purchases.filter(p => p === item.name).length > 0 ? ' x'+player.inventory.purchases.filter(p => p === item.name).length : ''}${player.inventory.purchases.filter(p => p === item.name).length >= item?.count ?? Infinity ? ' (Out of Stock)' : ''}</strong> <span style="opacity:0.8">${item.requires ? `Requires ${item.requires.join(', ')}` : ''}</span> ${item.desc} <span style="float:right;">${item.cost} coins</span></div> <button>Buy</button>`;
                     const buyButton = itemDiv.querySelector('button')
-                    if (player.inventory.coins < item.cost || (item.once && player.inventory.purchases.includes(item.name)) || (item.requires && !item.requires.every(req => player.inventory.purchases.includes(req)))) {
+                    let disabled = player.inventory.coins < item.cost;
+                    if (item.requires) {
+                        disabled = disabled || !item.requires.every(req => player.inventory.purchases.includes(req));
+                    }
+                    if (player.inventory.purchases.includes(item.name) && item.count === 1) {
+                        disabled = true;
+                    } else if (item.count > 1) {
+                        const alreadyPurchased = player.inventory.purchases.filter(p => p === item.name).length;
+                        if (alreadyPurchased >= item.count) {
+                            disabled = true;
+                        }
+                    }
+                    if (disabled) {
                         itemDiv.classList.add('disabled');
                         buyButton.disabled = true;
-                        buyButton.textContent = 'Buy';
                     } else {
                         buyButton.addEventListener('click', () => {
                             if (player.inventory.coins >= item.cost) {
@@ -1143,9 +1208,7 @@
                                 if (item.effect) {
                                     item.effect();
                                 }
-                                if (item.once) {
-                                    player.inventory.purchases.push(item.name);
-                                }
+                                player.inventory.purchases.push(item.name);
                                 updateShop();
                             } else {
                                 alert('Not enough coins!');
@@ -1318,7 +1381,7 @@
                 player.y = level.length / 2;
             }
             if (player.in_shop || !level) return; // disable movement while in shop
-            let moveSpeed = 2;
+            let moveSpeed = 2 + player.speedBoost;
             const rotSpeed = 1.5;
             if (keyState['shift']) {
                 moveSpeed *= 1.5
