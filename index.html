@@ -202,6 +202,12 @@
 
         let loading = []
 
+        // Cached game state for per-frame lookups
+        let cachedSprites = [];
+        let cachedExitPos = null;
+        let cachedKeyPos = null;
+        let cachedCoinCount = 0;
+
         let wallTextureData = null;
         loadTexture('wall.png').then((data) => {
             wallTextureData = data;
@@ -650,10 +656,6 @@
             }
         }
 
-        var cachedSprites = [];
-        var cachedExitPos = null;
-        var cachedKeyPos = null;
-        var cachedCoinCount = 0;
 
         function rebuildCaches() {
             cachedSprites = [];
@@ -663,12 +665,15 @@
             for (let y = 0; y < level.length; y++) {
                 for (let x = 0; x < level[y].length; x++) {
                     const cell = level[y][x];
-                    if (cell === '.' || cell === '*') {
+                    if (cell === '*') {
                         cachedSprites.push({ x: x + 0.5, y: y + 0.5, type: cell });
+                        cachedCoinCount++;
+                    } else if (cell === '.') {
+                        cachedSprites.push({ x: x + 0.5, y: y + 0.5, type: cell });
+                        cachedKeyPos = { x: x + 0.5, y: y + 0.5 };
+                    } else if (cell === '=') {
+                        cachedExitPos = { x: x + 0.5, y: y + 0.5 };
                     }
-                    if (cell === '*') cachedCoinCount++;
-                    if (cell === '=') cachedExitPos = { x: x + 0.5, y: y + 0.5 };
-                    if (cell === '.') cachedKeyPos = { x: x + 0.5, y: y + 0.5 };
                 }
             }
         }
@@ -701,8 +706,8 @@
                     return ' ';
                 }
             }));
-            levelPostProcessing()
-            rebuildCaches()
+            levelPostProcessing();
+            rebuildCaches();
         }
 
         function raycast(x, y, angle, options = {}) {
@@ -714,6 +719,7 @@
             let mapX = Math.floor(x);
             let mapY = Math.floor(y);
 
+            // Epsilon for near-zero direction detection; 1e10 acts as infinite distance for axis-parallel rays
             const deltaDistX = Math.abs(dirX) < 1e-10 ? 1e10 : Math.abs(1 / dirX);
             const deltaDistY = Math.abs(dirY) < 1e-10 ? 1e10 : Math.abs(1 / dirY);
 
