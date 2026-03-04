@@ -1068,7 +1068,7 @@
                 { name: 'Keyfinder', desc: 'Shows the direction of the key', once: true, cost: 15, effect: null, requires: ['Compass'] },
                 { name: 'Coin Radar', desc: 'Shows how many coins are on the current map', once: true, cost: 10, effect: null },
                 { name: 'Exit Tracker', desc: 'Shows the direction of the exit', once: true, cost: 20, effect: null, requires: ['Compass'] },
-                { name: 'Minimap', desc: 'Shows a minimap of explored areas in the top-left corner', once: true, cost: 5, effect: () => player.minimap = true },
+                { name: 'Minimap', desc: 'Shows a minimap of explored areas in the top-left corner', once: true, cost: 12, effect: () => player.minimap = true },
             ];
             items.sort((a, b) => {
                 const aAffordable = player.inventory.coins >= a.cost && (!a.once || !player.inventory.purchases.includes(a.name)) && (!a.requires || a.requires.every(req => player.inventory.purchases.includes(req)));
