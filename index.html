@@ -716,6 +716,7 @@
             cachedExitPos = null;
             cachedKeyPos = null;
             cachedCoinCount = 0;
+            if (!level) return;
             for (let y = 0; y < level.length; y++) {
                 for (let x = 0; x < level[y].length; x++) {
                     const cell = level[y][x];
