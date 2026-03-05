@@ -1076,6 +1076,11 @@
                 for (let y = 0; y < level.length; y++) {
                     for (let x = 0; x < level[y].length; x++) {
                         if (!player.observedCells.has(`${x},${y}`)) {
+                            if (player.inventory.purchases.includes('Fog Detector')) {
+                                ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+                                ctx.fillRect(x * scale, y * scale, scale, scale);
+                                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                            }
                             continue;
                         }
                         if (level[y][x] === '#' || level[y][x] === '+') {
@@ -1201,25 +1206,31 @@
                 { name: 'Coin Radar', desc: 'Shows how many coins are on the current map', count: 1, cost: 10, effect: null },
                 { name: 'Exit Tracker', desc: 'Shows the direction of the exit', count: 1, cost: 20, effect: null, requires: ['Compass'] },
                 { name: 'Minimap', desc: 'Shows a minimap of explored areas in the top-left corner', count: 1, cost: 35, effect: () => player.minimap = true },
+                { name: 'Fog Detector', desc: 'Shows where undiscovered areas are on the minimap as red squares', count: 1, cost: 5, requires: ['Minimap'] },
                 { name: 'Speed Boost', desc: 'Increases your movement speed', cost: 15, count: 3, effect: () => player.speedBoost += 0.5 },
             ];
-            items.sort((a, b) => {
-                let aAffordable = player.inventory.coins >= a.cost && (!a.requires || a.requires.every(req => player.inventory.purchases.includes(req))) && (!a.count || (player.inventory.purchases.filter(p => p === a.name).length < a.count));
-                let bAffordable = player.inventory.coins >= b.cost && (!b.requires || b.requires.every(req => player.inventory.purchases.includes(req))) && (!b.count || (player.inventory.purchases.filter(p => p === b.name).length < b.count));
-                if (aAffordable && !bAffordable) {
-                    return -1;
-                } else if (!aAffordable && bAffordable) {
-                    return 1;
-                } else {
-                    return 0;
-                }
-            });
             const updateShop = () => {
+                items.sort((a, b) => {
+                    let aAffordable = player.inventory.coins >= a.cost && (!a.requires || a.requires.every(req => player.inventory.purchases.includes(req))) && (!a.count || (player.inventory.purchases.filter(p => p === a.name).length < a.count));
+                    let bAffordable = player.inventory.coins >= b.cost && (!b.requires || b.requires.every(req => player.inventory.purchases.includes(req))) && (!b.count || (player.inventory.purchases.filter(p => p === b.name).length < b.count));
+                    if (aAffordable && !bAffordable) {
+                        return -1;
+                    } else if (!aAffordable && bAffordable) {
+                        return 1;
+                    } else {
+                        return 0;
+                    }
+                });
                 const coinsSpan = document.getElementById('coin-count');
                 coinsSpan.textContent = player.inventory.coins;
                 const shopItemsDiv = document.getElementById('shop-items');
                 shopItemsDiv.innerHTML = '';
-                items.forEach((item, index) => {
+                items.filter(item=>{
+                    if (item.requires) {
+                        return item.requires.every(req => player.inventory.purchases.includes(req));
+                    }
+                    return true;
+                }).forEach((item, index) => {
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'shop-item';
                     itemDiv.innerHTML = `<div><strong>${item.name}${item?.count && player.inventory.purchases.filter(p => p === item.name).length > 0 ? ' x'+player.inventory.purchases.filter(p => p === item.name).length : ''}${player.inventory.purchases.filter(p => p === item.name).length >= item?.count ?? Infinity ? ' (Out of Stock)' : ''}</strong> <span style="opacity:0.8">${item.requires ? `Requires ${item.requires.join(', ')}` : ''}</span> ${item.desc} <span style="float:right;">${item.cost} coins</span></div> <button>Buy</button>`;
@@ -1465,6 +1476,13 @@
 
             player.vx /= 1.5;
             player.vy /= 1.5;
+
+            // Add 3x3 grid around player to observed cells for minimap
+            for (let oy = -1; oy <= 1; oy++) {
+                for (let ox = -1; ox <= 1; ox++) {
+                    observe(player.x + ox, player.y + oy);
+                }
+            }
 
             // Check for key pickup
             const keyHits = isColliding(player.x, player.y, player.size, player.size, '.');
