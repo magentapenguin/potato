@@ -1104,13 +1104,18 @@
                         }
                     }
                 }
-                ctx.fillStyle = 'red';
-                ctx.fillRect(playerX * scale - player.size * scale / 2, playerY * scale - player.size * scale / 2, player.size * scale, player.size * scale);
-                ctx.strokeStyle = 'red';
-                ctx.beginPath();
-                ctx.moveTo(playerX * scale, playerY * scale);
-                ctx.lineTo(playerX * scale + Math.cos(playerAngle) * scale, playerY * scale + Math.sin(playerAngle) * scale);
-                ctx.stroke();
+                if (player.inventory.purchases.includes('Player Positioning')) {
+                    ctx.fillStyle = 'red';
+                    ctx.fillRect(playerX * scale - player.size * scale / 2, playerY * scale - player.size * scale / 2, player.size * scale, player.size * scale);
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = 'red';
+                    if (player.inventory.purchases.includes('Compass')) {
+                        ctx.beginPath();
+                        ctx.moveTo(playerX * scale, playerY * scale);
+                        ctx.lineTo(playerX * scale + Math.cos(playerAngle) * scale, playerY * scale + Math.sin(playerAngle) * scale);
+                        ctx.stroke();
+                    }
+                }
             }
             // compass
             if (player.inventory.purchases.includes('Compass')) {
@@ -1207,6 +1212,7 @@
                 { name: 'Exit Tracker', desc: 'Shows the direction of the exit', count: 1, cost: 20, effect: null, requires: ['Compass'] },
                 { name: 'Minimap', desc: 'Shows a minimap of explored areas in the top-left corner', count: 1, cost: 35, effect: () => player.minimap = true },
                 { name: 'Fog Detector', desc: 'Shows where undiscovered areas are on the minimap as red squares', count: 1, cost: 5, requires: ['Minimap'] },
+                { name: 'Player Positioning', desc: 'Shows where you are on the minimap as a red square', count: 1, cost: 15, requires: ['Minimap'] },
                 { name: 'Speed Boost', desc: 'Increases your movement speed', cost: 15, count: 3, effect: () => player.speedBoost += 0.5 },
             ];
             const updateShop = () => {
