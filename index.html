@@ -134,6 +134,14 @@
         style="inset: 10px; position: absolute; background-color: #1a1b22; color: white; padding: 20px; border-radius: 5px; display: flex; flex-direction: column; gap: 10px;"
         hidden>
         <label>
+            <span>Music</span>
+            <select id="music-type">
+                <option value="off" selected>Off</option>
+                <option value="spooky.mp3">Spooky</option>
+                <!-- More later -->
+            </select>
+        </label>
+        <label>
             <span>Mouse Sensitivity</span>
             <input type="range" id="mouse-sensitivity" min="0.1" max="5" value="1" step="0.1">
         </label>
@@ -193,10 +201,30 @@
         const settings = {
             mouseSensitivity: 1,
             invertY: false,
+            music: 'off',
         };
+
+        let currentMusic = null;
 
         document.getElementById('mouse-sensitivity').addEventListener('input', (e) => {
             settings.mouseSensitivity = parseFloat(e.target.value);
+        });
+
+        document.getElementById('music-type').addEventListener('change', (e) => {
+            settings.music = e.target.value;
+            if (currentMusic) {
+                currentMusic.pause();
+                currentMusic = null;
+            }
+            if (settings.music !== 'off') {
+                currentMusic = new Audio(settings.music);
+                currentMusic.loop = true;
+                currentMusic.play();
+            }
+        });
+
+        document.getElementById('invert-y').addEventListener('change', (e) => {
+            settings.invertY = e.target.checked;
         });
         
 
@@ -260,8 +288,7 @@
         function migrateOldSave(data, version) {
             const migrations = {
                 "0>1": (old) => {
-                    old.player.purchases = old.player.purchases.filter(p => p !== "Minimap");
-                    old.version = 1;
+                    old.version = 1; // Nothing but a version number
                     return old;
                 },
             }
@@ -357,16 +384,26 @@
             if (!localStorage.getItem('mazeSave')) {
                 return;
             }
-            const save = JSON.parse(localStorage.getItem('mazeSave'));
+            let save = JSON.parse(localStorage.getItem('mazeSave'));
             if (save) {
-                if (save.version < currentSaveVersion) {
-                    migrateOldSave(save, save.version ?? 0);
+                if (save.version && save.version !== currentSaveVersion) {
+                    try {
+                        save = migrateOldSave(save, save.version);
+                    } catch (err) {
+                        if (confirm('Failed to migrate old save: ' + err.message + '\nDo you want to clear your save and start fresh?')) {
+                            localStorage.setItem('clear', 'true');
+                            location.reload();
+                        }
+                        return;
+                    }
                 }
                 Object.assign(player, save.player);
                 Object.assign(settings, save.settings);
                 level = save.level;
                 player.observedCells = new Set(player.observedCells);
                 document.getElementById('mouse-sensitivity').value = settings.mouseSensitivity;
+                document.getElementById('music-type').value = settings.music;
+                document.getElementById('invert-y').checked = settings.invertY;
                 rebuildCaches();
             }
         }
