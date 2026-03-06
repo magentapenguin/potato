@@ -27,17 +27,6 @@
             margin: 0;
         }
 
-        #leave-shop {
-            padding: 10px 20px;
-            width: 100%;
-            cursor: pointer;
-            font: inherit;
-            background-color: #0a6354;
-            border: none;
-            color: white;
-            border-radius: 5px;
-        }
-
         #leave-shop:hover {
             background-color: #0b7e70;
         }
@@ -111,6 +100,16 @@
             white-space: nowrap;
             border: 0;
         }
+        .button {
+            display: inline-block;
+            padding: 5px 10px;
+            background-color: #0a6354;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font: inherit;
+        }
     </style>
 </head>
 
@@ -149,14 +148,14 @@
             <span>Invert Y-Axis</span> <!-- Pointless (maybe a future update?) -->
             <input type="checkbox" id="invert-y">
         </label>
-        <button id="close-settings" style="padding: 5px 10px; background-color: #0a6354; border: none; color: white; border-radius: 5px; cursor: pointer; font: inherit;"
+        <button id="close-settings" class="button"
         onclick="document.getElementById('settings-menu').hidden = true">
             Close
         </button>
-        <button style="background-color: #0a6354; border: none; border-radius: 5px; color: white; padding: 5px 10px; cursor: pointer; font: inherit;" id="export-save">
+        <button class="button" id="export-save">
             Export Save
         </button>
-        <button style="background-color: #0a6354; border: none; border-radius: 5px; color: white; padding: 5px 10px; cursor: pointer; font: inherit;" id="import-save">
+        <button class="button" id="import-save">
             Import Save
         </button>
     </div>
@@ -166,10 +165,10 @@
         <h1>Welcome to the shop!</h1>
         <p>You have <span id="coin-count"></span> coins.</p>
         <div id="shop-items"></div>
-        <button id="leave-shop">Leave Shop</button>
+        <button class="button" id="leave-shop">Leave Shop</button>
     </div>
     <canvas id="canvas" width="720" height="480" style="width: auto;"></canvas>
-    <button style="background-color: #0a6354; border: none; border-radius: 5px; color: white; padding: 2px 4px; cursor: pointer; font: inherit; font-size: x-small; display: block;"
+    <button class="button"
         onclick="confirm('Are you sure you want to clear your save? This cannot be undone.') && (localStorage.setItem('clear', 'true') || location.reload())">
         Clear Save
     </button>
@@ -1070,6 +1069,13 @@
 
             ctx.putImageData(imageData, 0, 0);
 
+            // Vignette effect
+            const gradient = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, canvas.width / 2 * 0.7, canvas.width / 2, canvas.height / 2, canvas.width / 2);
+            gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0.1)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
             if (player.minimap) {
                 const scale = 10;
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
@@ -1197,7 +1203,6 @@
                 ctx.fillText('Click to resume', canvas.width / 2, canvas.height / 2 + 30);
             }
 
-            requestAnimationFrame(render);
         }
 
         function shop() {
@@ -1289,7 +1294,6 @@
         loaded.then(() => {
             document.getElementById('loading').hidden = true;
             if (level.length === 0) generateLevel(currentLevelSize(player.level));
-            render();
             if (player.in_shop) {
                 shop().then(() => {
                     if (level.length === 0) generateLevel(currentLevelSize(player.level));
@@ -1435,8 +1439,8 @@
                 player.x = level[0].length / 2;
                 player.y = level.length / 2;
             }
-            if (player.in_shop || !level) return; // disable movement while in shop
-            let moveSpeed = 2 + player.speedBoost;
+            if (player.in_shop) return; // disable movement while in shop
+            let moveSpeed = 2.5 + player.speedBoost;
             const rotSpeed = 1.5;
             if (keyState['shift']) {
                 moveSpeed *= 1.5
@@ -1480,8 +1484,9 @@
             player.x = resolved.x;
             player.y = resolved.y;
 
-            player.vx /= 1.5;
-            player.vy /= 1.5;
+            const damping = Math.pow(1 / 1.5, deltaTime * 60);
+            player.vx *= damping;
+            player.vy *= damping;
 
             // Add 3x3 grid around player to observed cells for minimap
             for (let oy = -1; oy <= 1; oy++) {
@@ -1527,30 +1532,47 @@
             }
         }
         let lastUpdate = performance.now();
-        const updateInterval = () => {
+        const gameLoop = () => {
             const now = performance.now();
             const deltaTime = (now - lastUpdate) / 1000;
             lastUpdate = now;
 
+            // Apply accumulated mouse input
+            if (pendingMouseDelta !== 0) {
+                player.angle += pendingMouseDelta * mouseSensitivityInput.value * 0.005;
+                pendingMouseDelta = 0;
+            }
+
             update(deltaTime);
+            render();
+
             if (player.paused === false) {
-                requestAnimationFrame(updateInterval);
+                requestAnimationFrame(gameLoop);
             } else {
                 // If paused, keep checking for resume
-                setTimeout(updateInterval, 100);
+                setTimeout(gameLoop, 100);
             }
         };
-        requestAnimationFrame(updateInterval);
+        loaded.then(() => {
+            gameLoop();
+        });
 
         canvas.addEventListener('click', () => {
-            canvas.requestPointerLock();
+            try {
+                canvas.requestPointerLock({ unadjustedMovement: true }).catch(() => {
+                    canvas.requestPointerLock();
+                });
+            } catch (e) {
+                canvas.requestPointerLock();
+            }
         });
 
         const mouseSensitivityInput = document.getElementById('mouse-sensitivity');
+        let pendingMouseDelta = 0;
 
         canvas.addEventListener('mousemove', (e) => {
             if (document.pointerLockElement === canvas) {
-                player.angle += e.movementX * mouseSensitivityInput.value * 0.005;
+                pendingMouseDelta += e.movementX;
             }
         });
 
