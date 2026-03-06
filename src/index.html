@@ -1218,6 +1218,7 @@
                 { name: 'Minimap', desc: 'Shows a minimap of explored areas in the top-left corner', count: 1, cost: 35, effect: () => player.minimap = true },
                 { name: 'Fog Detector', desc: 'Shows where undiscovered areas are on the minimap as red squares', count: 1, cost: 5, requires: ['Minimap'] },
                 { name: 'Player Positioning', desc: 'Shows where you are on the minimap as a red square', count: 1, cost: 15, requires: ['Minimap'] },
+                { name: 'Surround Scan', desc: 'Upgrades the minimap to reveal a 5x5 area around you', cost: 45, count: 1, requires: ['Minimap'] },
                 { name: 'Speed Boost', desc: 'Increases your movement speed', cost: 15, count: 3, effect: () => player.speedBoost += 0.5 },
             ];
             const updateShop = () => {
@@ -1489,9 +1490,17 @@
             player.vy *= damping;
 
             // Add 3x3 grid around player to observed cells for minimap
-            for (let oy = -1; oy <= 1; oy++) {
-                for (let ox = -1; ox <= 1; ox++) {
-                    observe(player.x + ox, player.y + oy);
+            if (player.inventory.purchases.includes('Surround Scan')) {
+                for (let oy = -2; oy <= 2; oy++) {
+                    for (let ox = -2; ox <= 2; ox++) {
+                        observe(player.x + ox, player.y + oy);
+                    }
+                }
+            } else {
+                for (let oy = -1; oy <= 1; oy++) {
+                    for (let ox = -1; ox <= 1; ox++) {
+                        observe(player.x + ox, player.y + oy);
+                    }
                 }
             }
 
