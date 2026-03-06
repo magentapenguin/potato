@@ -6,6 +6,6 @@
     "@tauri-apps/plugin-updater": "^2.10.0"
   },
   "scripts": {
-    "tauri": "npx tauri"
+    "tauri": "tauri"
   }
 }
