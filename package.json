@@ -1,0 +1,11 @@
+{
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.10.1"
+  },
+  "dependencies": {
+    "@tauri-apps/plugin-updater": "^2.10.0"
+  },
+  "scripts": {
+    "tauri": "tauri"
+  }
+}

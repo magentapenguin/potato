@@ -1,0 +1,45 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Potato Game",
+  "version": "0.1.1",
+  "identifier": "dev.magentapenugin.potato",
+  "build": {
+    "frontendDist": "../src",
+    "devUrl": "http://localhost:8000",
+    "beforeDevCommand": "python -m http.server 8000 --directory ../src"
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc0RDVDQjM1NURCOEU2NUMKUldSYzVyaGROY3ZWZEpGbExsSUtmZWJ4WWc1NUZkTWQ0K1Z2eHZyQzZMMVR5bC91SXN1elQyT0kK",
+      "endpoints": [
+        "https://github.com/magentapenugin/potato/releases/latest/download/latest.json"
+      ]
+    }
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "2.5d Maze Game",
+        "width": 800,
+        "height": 600,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: https://asset.localhost; connect-src ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "createUpdaterArtifacts": true,
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
