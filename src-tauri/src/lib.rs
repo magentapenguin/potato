@@ -1,19 +1,32 @@
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use tauri_plugin_updater::UpdaterExt;
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  tauri::Builder::default()
+  let builder = tauri::Builder::default()
+    .plugin(tauri_plugin_log::Builder::new().build());
+
+  #[cfg(not(any(target_os = "android", target_os = "ios")))]
+  let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+
+  builder
     .setup(|app| {
-      let handle = app.handle().clone();
-      tauri::async_runtime::spawn(async move {
-        update(handle).await.unwrap();
-      });
+      #[cfg(not(any(target_os = "android", target_os = "ios")))]
+      {
+        let handle = app.handle().clone();
+        tauri::async_runtime::spawn(async move {
+          if let Err(e) = update(handle).await {
+            log::error!("Failed to update: {e}");
+          }
+        });
+      }
       Ok(())
     })
     .run(tauri::generate_context!())
     .unwrap();
 }
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
   if let Some(update) = app.updater()?.check().await? {
     let mut downloaded = 0;
@@ -23,15 +36,15 @@ async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
       .download_and_install(
         |chunk_length, content_length| {
           downloaded += chunk_length;
-          println!("downloaded {downloaded} from {content_length:?}");
+          log::info!("downloaded {downloaded} from {content_length:?}");
         },
         || {
-          println!("download finished");
+          log::info!("download finished");
         },
       )
       .await?;
 
-    println!("update installed");
+    log::info!("update installed");
     app.restart();
   }
 
