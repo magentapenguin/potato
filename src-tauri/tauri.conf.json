@@ -8,6 +8,14 @@
     "devUrl": "http://localhost:8000",
     "beforeDevCommand": "python -m http.server"
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc0RDVDQjM1NURCOEU2NUMKUldSYzVyaGROY3ZWZEpGbExsSUtmZWJ4WWc1NUZkTWQ0K1Z2eHZyQzZMMVR5bC91SXN1elQyT0kK",
+      "endpoints": [
+        "https://github.com/magentapenugin/potato/releases/latest/download/latest.json"
+      ]
+    }
+  },
   "app": {
     "windows": [
       {
