@@ -137,13 +137,21 @@
             <span>Music</span>
             <select id="music-type">
                 <option value="off" selected>Off</option>
-                <option value="spooky.mp3">Spooky</option>
+                <option value="spooky">Spooky</option>
                 <!-- More later -->
             </select>
         </label>
         <label>
             <span>Mouse Sensitivity</span>
             <input type="range" id="mouse-sensitivity" min="0.1" max="5" value="1" step="0.1">
+        </label>
+        <label>
+            <span>Music Volume</span>
+            <input type="range" id="music-volume" min="0" max="1" value="1" step="0.01">
+        </label>
+        <label>
+            <span>Sound Effects Volume</span>
+            <input type="range" id="sfx-volume" min="0" max="1" value="1" step="0.01">
         </label>
         <label>
             <span>Invert Y-Axis</span> <!-- Pointless (maybe a future update?) -->
@@ -198,16 +206,40 @@
             observedCells: new Set(),
         }
 
+        let lastFootstep = 0;
+
         const settings = {
             mouseSensitivity: 1,
             invertY: false,
             music: 'off',
+            musicVolume: 1,
+            sfxVolume: 1,
         };
 
         let currentMusic = null;
 
         document.getElementById('mouse-sensitivity').addEventListener('input', (e) => {
             settings.mouseSensitivity = parseFloat(e.target.value);
+        });
+
+        document.getElementById('music-volume').addEventListener('input', (e) => {
+            settings.musicVolume = parseFloat(e.target.value);
+            if (currentMusic) {
+                currentMusic.volume = settings.musicVolume;
+            }
+        });
+
+        document.getElementById('sfx-volume').addEventListener('input', (e) => {
+            settings.sfxVolume = parseFloat(e.target.value);
+            if (coinSound) {
+                coinSound.volume = settings.sfxVolume;
+            }
+            if (keySound) {
+                keySound.volume = settings.sfxVolume;
+            }
+            footstepSounds.forEach(sound => {
+                sound.volume = settings.sfxVolume;
+            });
         });
 
         document.getElementById('music-type').addEventListener('change', (e) => {
@@ -217,9 +249,11 @@
                 currentMusic = null;
             }
             if (settings.music !== 'off') {
-                currentMusic = new Audio(settings.music);
-                currentMusic.loop = true;
-                currentMusic.play();
+                musics[settings.music].then((audio) => {
+                    currentMusic = audio;
+                    currentMusic.loop = true;
+                    currentMusic.play();
+                });
             }
         });
 
@@ -231,6 +265,40 @@
         let level = [];
 
         let loading = []
+
+
+        const musics = {
+            spooky: loadSound('spooky.mp3'),
+        };
+
+        let coinSound = null;
+        loadSound('coin.wav').then((audio) => {
+            coinSound = audio;
+        });
+
+        let keySound = null;
+        loadSound('key.wav').then((audio) => {
+            keySound = audio;
+        });
+
+        let footstepSounds = [];
+        for (let i = 1; i <= 3; i++) {
+            loadSound(`/footsteps/foot${i}.wav`).then((audio) => {
+                footstepSounds.push(audio);
+            });
+        }
+
+        function playFootstep(pitch = 1) {
+            if (footstepSounds.length > 0) {
+                const sound = footstepSounds[Math.floor(Math.random() * footstepSounds.length)];
+                sound.preservesPitch = false;
+                sound.playbackRate = pitch;
+                console.log('Playing footstep sound with pitch:', pitch);
+                sound.currentTime = 0;
+                sound.play();
+            }
+        }
+
 
         // Cached game state for per-frame lookups
         let cachedSprites = [];
@@ -403,9 +471,26 @@
                 player.observedCells = new Set(player.observedCells);
                 document.getElementById('mouse-sensitivity').value = settings.mouseSensitivity;
                 document.getElementById('music-type').value = settings.music;
+                document.getElementById('music-volume').value = settings.musicVolume;
+                document.getElementById('sfx-volume').value = settings.sfxVolume;
                 document.getElementById('invert-y').checked = settings.invertY;
                 rebuildCaches();
             }
+        }
+
+        function loadSound(src) {
+            const p = new Promise((resolve, reject) => {
+                const audio = new Audio(src);
+                audio.oncanplaythrough = function () {
+                    resolve(audio);
+                };
+                audio.onerror = function () {
+                    console.error('Failed to load sound:', src);
+                    reject(new Error('Failed to load sound: ' + src));
+                };
+            });
+            loading.push(p);
+            return p;
         }
 
         function loadTexture(src, includeImage = false) {
@@ -1490,6 +1575,15 @@
             player.vx *= damping;
             player.vy *= damping;
 
+            // Play footstep sounds
+            if ((player.vx * player.vx + player.vy * player.vy) > 0.01) {
+                console.log('Moving', performance.now() - lastFootstep > 400 / (moveSpeed / 2.5));
+                if (performance.now() - lastFootstep > 400 / (moveSpeed / 2.5)) {
+                    lastFootstep = performance.now();
+                    playFootstep(1);
+                }
+            }
+
             // Add 3x3 grid around player to observed cells for minimap
             if (player.inventory.purchases.includes('Surround Scan')) {
                 for (let oy = -2; oy <= 2; oy++) {
@@ -1513,6 +1607,10 @@
                     level[key.y][key.x] = ' ';
                     player.inventory.key++;
                     console.log('Key collected! Total:', player.inventory.key);
+                    if (keySound) {
+                        keySound.currentTime = 0;
+                        keySound.play();
+                    }
                 }
             }
 
@@ -1523,6 +1621,10 @@
                     level[coin.y][coin.x] = ' ';
                     player.inventory.coins++;
                     console.log('Coin collected! Total:', player.inventory.coins);
+                    if (coinSound) {
+                        coinSound.currentTime = 0;
+                        coinSound.play();
+                    }
                 }
             }
 
