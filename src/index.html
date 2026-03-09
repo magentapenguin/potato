@@ -90,6 +90,9 @@
         [hidden] {
             display: none !important;
         }
+        dialog:not([open]) {
+            display: none !important;
+        }
         .sr-only {
             position: absolute;
             width: 1px;
@@ -111,6 +114,15 @@
             cursor: pointer;
             font: inherit;
         }
+        .button:hover {
+                background-color: #0b7e70;
+            }
+        #settings-menu label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
     </style>
     <link rel="manifest" href="manifest.webmanifest">
 </head>
@@ -122,7 +134,7 @@
     </div>
     <button
         id="settings"
-        onclick="document.getElementById('settings-menu').hidden = !document.getElementById('settings-menu').hidden"
+        onclick="document.getElementById('settings-menu').showModal()"
         style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: white; cursor: pointer;"
         >
         <span class="sr-only">Settings</span>
@@ -130,10 +142,10 @@
             <path d="M18.75 12.75h1.5a.75.75 0 0 0 0-1.5h-1.5a.75.75 0 0 0 0 1.5ZM12 6a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 12 6ZM12 18a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 12 18ZM3.75 6.75h1.5a.75.75 0 1 0 0-1.5h-1.5a.75.75 0 0 0 0 1.5ZM5.25 18.75h-1.5a.75.75 0 0 1 0-1.5h1.5a.75.75 0 0 1 0 1.5ZM3 12a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 3 12ZM9 3.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM12.75 12a2.25 2.25 0 1 1 4.5 0 2.25 2.25 0 0 1-4.5 0ZM9 15.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" />
         </svg>          
     </button>
-    <div
+    <dialog
         id="settings-menu"
-        style="inset: 10px; position: absolute; background-color: #1a1b22; color: white; padding: 20px; border-radius: 5px; display: flex; flex-direction: column; gap: 10px;"
-        hidden>
+        style="background-color: #1a1b22; border: 1px #2c2d35 solid; color: white; padding: 20px; border-radius: 5px; display: flex; flex-direction: column; gap: 10px;"
+        >
         <label>
             <span>Music</span>
             <select id="music-type">
@@ -158,17 +170,17 @@
             <span>Invert Y-Axis</span> <!-- Pointless (maybe a future update?) -->
             <input type="checkbox" id="invert-y">
         </label>
-        <button id="close-settings" class="button"
-        onclick="document.getElementById('settings-menu').hidden = true">
-            Close
-        </button>
         <button class="button" id="export-save">
             Export Save
         </button>
         <button class="button" id="import-save">
             Import Save
         </button>
-    </div>
+        <button id="close-settings" class="button"
+        onclick="document.getElementById('settings-menu').close()">
+            Close
+        </button>
+    </dialog>
     <div id="shop"
         style="position: absolute; inset: 0; overflow-y: auto; background-color: black; padding: 10px; color: white;"
         hidden>
