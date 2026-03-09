@@ -5,6 +5,16 @@
     "theme_color": "black",
     "start_url": ".",
     "background_color": "black",
+    "orientation": "landscape",
+    "screenshots": [
+        {
+            "src": "screenshots/1.jpg",
+            "sizes": "1281x720",
+            "type": "image/jpeg",
+            "label": "A screenshot of the game showing a maze.",
+            "form_factor": "wide"
+        }
+    ],
     "icons": [
         {
             "src": "32x32.png",
