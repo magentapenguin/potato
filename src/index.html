@@ -1316,7 +1316,7 @@
                     } else if (!aAffordable && bAffordable) {
                         return 1;
                     } else {
-                        return 0;
+                        return a.cost - b.cost;
                     }
                 });
                 const coinsSpan = document.getElementById('coin-count');
