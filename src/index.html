@@ -207,6 +207,7 @@
         }
 
         let lastFootstep = 0;
+        let lastLevelLoad = -Infinity;
 
         const settings = {
             mouseSensitivity: 1,
@@ -885,6 +886,7 @@
             }));
             levelPostProcessing();
             rebuildCaches();
+            lastLevelLoad = performance.now();
         }
 
         function raycast(x, y, angle, options = {}) {
@@ -1276,6 +1278,18 @@
             ctx.textAlign = 'center';
             ctx.fillText(`Level ${player.level} - ${currentLevelSize(player.level)}x${currentLevelSize(player.level)}`, canvas.width / 2, 30);
 
+            // Draw a moving text alert when the level loads
+            // fade out over 3 seconds and move up off the top of the screen
+            if (performance.now() - lastLevelLoad) {
+                const alertText = `Level ${player.level}`;
+                const alpha = 1 - Math.pow((performance.now() - lastLevelLoad) / 3000, 3);
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.font = `${45 - 10 * (1-alpha)}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText(alertText, canvas.width / 2, canvas.height / 2 - (1 - alpha) * canvas.height / 2);
+                ctx.font = `${16 - 5 * (1-alpha)}px Inter, sans-serif`;
+                ctx.fillText(`${currentLevelSize(player.level)}x${currentLevelSize(player.level)}`, canvas.width / 2, canvas.height / 2 - (1 - alpha) * canvas.height / 2 + 30);
+            }
 
             if (player.paused !== false) {
                 ctx.fillStyle = `rgba(0, 0, 0, ${Math.min(0.8, Math.pow((performance.now() - player.paused) / 1000, 0.2))})`;
@@ -1373,6 +1387,7 @@
                 leaveButton.addEventListener('click', () => {
                     resolve();
                     player.in_shop = false;
+                    canvas.requestPointerLock();
                     document.getElementById('shop').hidden = true;
                 });
             });
