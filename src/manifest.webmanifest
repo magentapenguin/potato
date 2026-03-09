@@ -3,6 +3,7 @@
     "short_name": "Potato",
     "display": "standalone",
     "theme_color": "black",
+    "start_url": ".",
     "background_color": "black",
     "icons": [
         {
