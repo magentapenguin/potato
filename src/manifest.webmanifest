@@ -3,7 +3,7 @@
     "short_name": "Potato",
     "display": "standalone",
     "theme_color": "black",
-    "start_url": ".",
+    "start_url": "/potato/",
     "background_color": "black",
     "orientation": "landscape",
     "screenshots": [
@@ -13,6 +13,14 @@
             "type": "image/jpeg",
             "label": "A screenshot of the game showing a maze.",
             "form_factor": "wide"
+        }
+    ],
+    "file_handlers": [
+        {
+            "action": "/potato/",
+            "accept": {
+                "application/json": [".potato"]
+            }
         }
     ],
     "icons": [
