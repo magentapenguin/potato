@@ -154,6 +154,10 @@
             <input type="range" id="sfx-volume" min="0" max="1" value="1" step="0.01">
         </label>
         <label>
+            <span>Footstep Volume</span>
+            <input type="range" id="footstep-volume" min="0" max="1" value="1" step="0.01">
+        </label>
+        <label>
             <span>Invert Y-Axis</span> <!-- Pointless (maybe a future update?) -->
             <input type="checkbox" id="invert-y">
         </label>
@@ -214,6 +218,7 @@
             music: 'off',
             musicVolume: 1,
             sfxVolume: 1,
+            footstepVolume: 1,
         };
 
         let currentMusic = null;
@@ -237,6 +242,10 @@
             if (keySound) {
                 keySound.volume = settings.sfxVolume;
             }
+        });
+
+        document.getElementById('footstep-volume').addEventListener('input', (e) => {
+            settings.footstepVolume = parseFloat(e.target.value);
             footstepSounds.forEach(sound => {
                 sound.volume = settings.sfxVolume;
             });
@@ -336,7 +345,7 @@
         });
 
         
-        const currentSaveVersion = 1;
+        const currentSaveVersion = 2;
 
         setInterval(() => {
             saveData();
@@ -362,6 +371,11 @@
             const migrations = {
                 "0>1": (old) => {
                     old.version = 1; // Nothing but a version number
+                    return old;
+                },
+                "1>2": (old) => {
+                    old.version = 2;
+                    old.settings.footstepVolume = old.settings.sfxVolume; 
                     return old;
                 },
             }
@@ -451,6 +465,10 @@
                 level = data.level;
                 player.observedCells = new Set(player.observedCells);
                 document.getElementById('mouse-sensitivity').value = settings.mouseSensitivity;
+                document.getElementById('music-type').value = settings.music;
+                document.getElementById('music-volume').value = settings.musicVolume;
+                document.getElementById('sfx-volume').value = settings.sfxVolume;
+                document.getElementById('footstep-volume').value = settings.footstepVolume;
                 rebuildCaches();
                 return;
             }
@@ -478,6 +496,7 @@
                 document.getElementById('music-type').value = settings.music;
                 document.getElementById('music-volume').value = settings.musicVolume;
                 document.getElementById('sfx-volume').value = settings.sfxVolume;
+                document.getElementById('footstep-volume').value = settings.footstepVolume;
                 document.getElementById('invert-y').checked = settings.invertY;
                 rebuildCaches();
             }
