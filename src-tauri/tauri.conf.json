@@ -6,7 +6,7 @@
   "build": {
     "frontendDist": "../src",
     "devUrl": "http://localhost:8000",
-    "beforeDevCommand": "python -m http.server 8000 --directory ../src"
+    "beforeDevCommand": "cd .. && npm run dev"
   },
   "plugins": {
     "updater": {
@@ -22,7 +22,7 @@
         "title": "2.5d Maze Game",
         "width": 800,
         "height": 600,
-        "resizable": true,
+        "resizable": false,
         "fullscreen": false
       }
     ],

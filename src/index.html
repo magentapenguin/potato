@@ -7,13 +7,14 @@
     <title>2.5d Maze Runner</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+        @import url('fonts/inter.css');
         body, html {
             margin: 0;
             padding: 0;
             overflow: hidden;
             background-color: black;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter Variable', 'Inter', sans-serif;
+            font-optical-sizing: auto;
         }
 
         #shop {
@@ -27,8 +28,15 @@
             margin: 0;
         }
 
-        #leave-shop:hover {
-            background-color: #0b7e70;
+        div:has(> #leave-shop) {
+            position: sticky;
+            bottom: 0;
+            width: 100%;
+            background-color: #1a1b22;
+        }
+
+        #leave-shop {
+            width: 100%;
         }
 
         #shop-items {
@@ -89,6 +97,9 @@
         [hidden] {
             display: none !important;
         }
+        dialog:not([open]) {
+            display: none !important;
+        }
         .sr-only {
             position: absolute;
             width: 1px;
@@ -110,6 +121,15 @@
             cursor: pointer;
             font: inherit;
         }
+        .button:hover {
+                background-color: #0b7e70;
+            }
+        #settings-menu label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
     </style>
     <link rel="manifest" href="manifest.webmanifest">
 </head>
@@ -121,7 +141,7 @@
     </div>
     <button
         id="settings"
-        onclick="document.getElementById('settings-menu').hidden = !document.getElementById('settings-menu').hidden"
+        onclick="document.getElementById('settings-menu').showModal()"
         style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: white; cursor: pointer;"
         >
         <span class="sr-only">Settings</span>
@@ -129,10 +149,10 @@
             <path d="M18.75 12.75h1.5a.75.75 0 0 0 0-1.5h-1.5a.75.75 0 0 0 0 1.5ZM12 6a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 12 6ZM12 18a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 12 18ZM3.75 6.75h1.5a.75.75 0 1 0 0-1.5h-1.5a.75.75 0 0 0 0 1.5ZM5.25 18.75h-1.5a.75.75 0 0 1 0-1.5h1.5a.75.75 0 0 1 0 1.5ZM3 12a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 3 12ZM9 3.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM12.75 12a2.25 2.25 0 1 1 4.5 0 2.25 2.25 0 0 1-4.5 0ZM9 15.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" />
         </svg>          
     </button>
-    <div
+    <dialog
         id="settings-menu"
-        style="inset: 10px; position: absolute; background-color: #1a1b22; color: white; padding: 20px; border-radius: 5px; display: flex; flex-direction: column; gap: 10px;"
-        hidden>
+        style="background-color: #1a1b22; border: 1px #2c2d35 solid; color: white; padding: 20px; border-radius: 5px; display: flex; flex-direction: column; gap: 10px;"
+        >
         <label>
             <span>Music</span>
             <select id="music-type">
@@ -161,25 +181,26 @@
             <span>Invert Y-Axis</span> <!-- Pointless (maybe a future update?) -->
             <input type="checkbox" id="invert-y">
         </label>
-        <button id="close-settings" class="button"
-        onclick="document.getElementById('settings-menu').hidden = true">
-            Close
-        </button>
         <button class="button" id="export-save">
             Export Save
         </button>
         <button class="button" id="import-save">
             Import Save
         </button>
-    </div>
-    <div id="shop"
-        style="position: absolute; inset: 0; overflow-y: auto; background-color: black; padding: 10px; color: white;"
-        hidden>
+        <button id="close-settings" class="button"
+        onclick="document.getElementById('settings-menu').close()">
+            Close
+        </button>
+    </dialog>
+    <dialog id="shop"
+        style="position: absolute; inset: 0; width: 100%; overflow-y: auto; border-radius: 5px; background-color: black; border: 1px #2c2d35 solid; padding: 10px; color: white;">
         <h1>Welcome to the shop!</h1>
-        <p>You have <span id="coin-count"></span> coins.</p>
+        <p style="position: sticky; top: 0;">You have <span id="coin-count"></span> coins.</p>
         <div id="shop-items"></div>
-        <button class="button" id="leave-shop">Leave Shop</button>
-    </div>
+        <div>
+            <button class="button" id="leave-shop">Leave Shop</button>
+        </div>
+    </dialog>
     <canvas id="canvas" width="720" height="480" style="width: auto;"></canvas>
     <button class="button"
         onclick="confirm('Are you sure you want to clear your save? This cannot be undone.') && (localStorage.setItem('clear', 'true') || location.reload())">
@@ -211,6 +232,7 @@
         }
 
         let lastFootstep = 0;
+        let lastLevelLoad = -Infinity;
 
         const settings = {
             mouseSensitivity: 1,
@@ -909,6 +931,7 @@
             }));
             levelPostProcessing();
             rebuildCaches();
+            lastLevelLoad = performance.now();
         }
 
         function raycast(x, y, angle, options = {}) {
@@ -1326,6 +1349,18 @@
             ctx.textAlign = 'center';
             ctx.fillText(`Level ${player.level} - ${currentLevelSize(player.level)}x${currentLevelSize(player.level)}`, canvas.width / 2, 30);
 
+            // Draw a moving text alert when the level loads
+            // fade out over 3 seconds and move up off the top of the screen
+            if (performance.now() - lastLevelLoad) {
+                const alertText = `Level ${player.level}`;
+                const alpha = 1 - Math.pow((performance.now() - lastLevelLoad) / 3000, 3);
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.font = `${45 - 10 * (1-alpha)}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText(alertText, canvas.width / 2, canvas.height / 2 - (1 - alpha) * canvas.height / 2);
+                ctx.font = `${16 - 5 * (1-alpha)}px Inter, sans-serif`;
+                ctx.fillText(`${currentLevelSize(player.level)}x${currentLevelSize(player.level)}`, canvas.width / 2, canvas.height / 2 - (1 - alpha) * canvas.height / 2 + 30);
+            }
 
             if (player.paused !== false) {
                 ctx.fillStyle = `rgba(0, 0, 0, ${Math.min(0.8, Math.pow((performance.now() - player.paused) / 1000, 0.2))})`;
@@ -1344,7 +1379,7 @@
         function shop() {
             player.in_shop = true;
             document.exitPointerLock();
-            document.getElementById('shop').hidden = false;
+            document.getElementById('shop').showModal();
             const items = [
                 { name: 'Extra Key', desc: 'Gives you an extra key', cost: 25, effect: () => player.inventory.key++ },
                 { name: 'Compass', desc: 'Displays a compass at the top of the screen', count: 1, cost: 2, effect: null }, // happens in rendering
@@ -1417,7 +1452,8 @@
                 leaveButton.addEventListener('click', () => {
                     resolve();
                     player.in_shop = false;
-                    document.getElementById('shop').hidden = true;
+                    canvas.requestPointerLock();
+                    document.getElementById('shop').close();
                 });
             });
         }

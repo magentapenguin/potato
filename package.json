@@ -7,6 +7,6 @@
   },
   "scripts": {
     "tauri": "tauri",
-    "dev": "python -m http.server"
+    "dev": "python -m http.server 8000 --directory src"
   }
 }
