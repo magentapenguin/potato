@@ -28,8 +28,15 @@
             margin: 0;
         }
 
-        #leave-shop:hover {
-            background-color: #0b7e70;
+        div:has(> #leave-shop) {
+            position: sticky;
+            bottom: 0;
+            width: 100%;
+            background-color: #1a1b22;
+        }
+
+        #leave-shop {
+            width: 100%;
         }
 
         #shop-items {
@@ -181,14 +188,15 @@
             Close
         </button>
     </dialog>
-    <div id="shop"
-        style="position: absolute; inset: 0; overflow-y: auto; background-color: black; padding: 10px; color: white;"
-        hidden>
+    <dialog id="shop"
+        style="position: absolute; inset: 0; width: 100%; overflow-y: auto; border-radius: 5px; background-color: black; border: 1px #2c2d35 solid; padding: 10px; color: white;">
         <h1>Welcome to the shop!</h1>
-        <p>You have <span id="coin-count"></span> coins.</p>
+        <p style="position: sticky; top: 0;">You have <span id="coin-count"></span> coins.</p>
         <div id="shop-items"></div>
-        <button class="button" id="leave-shop">Leave Shop</button>
-    </div>
+        <div>
+            <button class="button" id="leave-shop">Leave Shop</button>
+        </div>
+    </dialog>
     <canvas id="canvas" width="720" height="480" style="width: auto;"></canvas>
     <button class="button"
         onclick="confirm('Are you sure you want to clear your save? This cannot be undone.') && (localStorage.setItem('clear', 'true') || location.reload())">
@@ -1352,7 +1360,7 @@
         function shop() {
             player.in_shop = true;
             document.exitPointerLock();
-            document.getElementById('shop').hidden = false;
+            document.getElementById('shop').showModal();
             const items = [
                 { name: 'Extra Key', desc: 'Gives you an extra key', cost: 25, effect: () => player.inventory.key++ },
                 { name: 'Compass', desc: 'Displays a compass at the top of the screen', count: 1, cost: 2, effect: null }, // happens in rendering
@@ -1426,7 +1434,7 @@
                     resolve();
                     player.in_shop = false;
                     canvas.requestPointerLock();
-                    document.getElementById('shop').hidden = true;
+                    document.getElementById('shop').close();
                 });
             });
         }
