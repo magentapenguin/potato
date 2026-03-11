@@ -37,6 +37,31 @@ if ("launchQueue" in window) {
             reader.readAsText(file);
         }
     });
+} else if (window.__TAURI__) {
+    window.__TAURI__.event.listen('file-opened', (event) => {
+        const file = event.payload;
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const data = reader.result;
+                const parsedData = JSON.parse(data);
+                if (!parsedData.save.player || !parsedData.save.level) {
+                    throw new Error('Invalid save file');
+                }
+                const saveName = prompt('Enter a name for your save:', parsedData.name ?? 'Imported Save');
+                if (saveName) {
+                    const saves = JSON.parse(localStorage.getItem('saves') ?? '[]');
+                    saves.push({ name: saveName, data: JSON.stringify(parsedData.save) });
+                    localStorage.setItem('saves', JSON.stringify(saves));
+                    updateSaveList();
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Failed to import save: ' + e.message);
+            }
+        }
+        reader.readAsText(file);
+    });
 }
 
 function updateSaveList() {
