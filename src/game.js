@@ -190,9 +190,8 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-document.getElementById('export-save').addEventListener('click', exportSave);
 document.getElementById('export-settings').addEventListener('click', exportSettings);
-document.getElementById('import-save').addEventListener('click', importSave);
+document.getElementById('import-settings').addEventListener('click', importSettings);
 
 function migrateOldSave(data, version) {
     /** @type {Record<string, (old: Record) => Record} */
@@ -270,6 +269,32 @@ function exportSettings() {
     document.body.removeChild(a);
 }
 
+function importSettings() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    input.onchange = e => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = event => {
+            try {
+                const data = JSON.parse(event.target.result);
+                if (data.settings) {
+                    loadSettings(event.target.result);
+                } else {
+                    alert('Invalid settings file');
+                }
+            } catch (err) {
+                alert('Error loading settings: ' + err.message);
+            }
+            input.remove();
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+    input.hidden = true;
+}
+
 function importSave() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -284,6 +309,8 @@ function importSave() {
                     loadData(event.target.result);
                 } else if (data.settings) {
                     loadSettings(event.target.result);
+                } else {
+                    alert('Invalid save file');
                 }
             } catch (err) {
                 alert('Error loading save: ' + err.message);

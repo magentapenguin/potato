@@ -11,19 +11,27 @@ pub fn run() {
 
   builder
     .setup(|app| {
-      #[cfg(not(any(target_os = "android", target_os = "ios")))]
-      {
-        let handle = app.handle().clone();
-        tauri::async_runtime::spawn(async move {
-          if let Err(e) = update(handle).await {
-            log::error!("Failed to update: {e}");
-          }
-        });
+      // Windows / Linux: file path comes in as a CLI arg
+      let args: Vec<String> = std::env::args().collect();
+      if let Some(path) = args.get(1) {
+        app.emit("file-opened", path).ok();
       }
       Ok(())
     })
-    .run(tauri::generate_context!())
-    .unwrap();
+    .build(tauri::generate_context!())
+    .unwrap()
+    .run(|app_handle, event| {
+      // macOS: file open events come through RunEvent::Opened
+      if let tauri::RunEvent::Opened { urls } = event {
+        let paths: Vec<String> = urls.iter()
+          .filter_map(|u| u.to_file_path().ok())
+          .filter_map(|p| p.to_str().map(|s| s.to_string()))
+          .collect();
+        for path in paths {
+          app_handle.emit("file-opened", &path).ok();
+        }
+      }
+    });
 }
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]

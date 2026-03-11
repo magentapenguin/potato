@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Potato Game",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "identifier": "dev.magentapenugin.potato",
   "build": {
     "frontendDist": "../src",
@@ -17,6 +17,7 @@
     }
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "2.5d Maze Game",
@@ -32,6 +33,15 @@
   },
   "bundle": {
     "createUpdaterArtifacts": true,
+    "fileAssociations": [
+       {
+        "ext": [".potato", ".cfg.potato"],
+        "name": "Potato Save File",
+        "role": "Editor",
+        "description": "Potato Game Save File",
+        "mimeType": "application/x-potato"
+       }
+    ],
     "active": true,
     "targets": "all",
     "icon": [
