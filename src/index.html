@@ -26,6 +26,12 @@
             border: 1px solid #333;
             border-radius: 5px;
         }
+        .save-name {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
         .save-item.current-save {
             background-color: #111;
             border-color: #354;
@@ -36,7 +42,6 @@
         }
         .save-level {
             color: #888;
-            margin-left: 10px;
             font-weight: 400;
         }
         #create-save, #import-save {
@@ -45,7 +50,7 @@
     </style>
 </head>
 <body>
-    <div id='main-menu' style='display: flex; flex-direction: column; gap: 20px; padding: 20px; width: clamp(300px, 50%, 600px); margin: auto;'>
+    <div id='main-menu' style='display: flex; flex-direction: column; gap: 20px; padding: 20px; width: clamp(300px, 80%, 800px); margin: auto;'>
         <h1 style="text-align: center;">Potato</h1>
         <div style="display: flex; gap: 10px; justify-content: center;">
             <button id='create-save' class="button">Create New Save</button>
