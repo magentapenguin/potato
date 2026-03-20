@@ -852,13 +852,29 @@ function render() {
         if (player.inventory.purchases.includes('Player Positioning')) {
             ctx.fillStyle = 'red';
             ctx.fillRect(playerX * scale - player.size * scale / 2, playerY * scale - player.size * scale / 2, player.size * scale, player.size * scale);
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 2;
             ctx.strokeStyle = 'red';
-            if (player.inventory.purchases.includes('Compass')) {
+            if (player.inventory.purchases.includes('Compass Integration')) {
                 ctx.beginPath();
                 ctx.moveTo(playerX * scale, playerY * scale);
                 ctx.lineTo(playerX * scale + Math.cos(playerAngle) * scale, playerY * scale + Math.sin(playerAngle) * scale);
                 ctx.stroke();
+                if (player.inventory.purchases.includes('Exit Tracker') && cachedExitPos) {
+                    const angleToExit = Math.atan2(cachedExitPos.y - playerY, cachedExitPos.x - playerX);
+                    ctx.beginPath();
+                    ctx.moveTo(playerX * scale, playerY * scale);
+                    ctx.lineTo(playerX * scale + Math.cos(angleToExit) * scale * 1.3, playerY * scale + Math.sin(angleToExit) * scale * 1.3);
+                    ctx.strokeStyle = 'lime';
+                    ctx.stroke();
+                }
+                if (player.inventory.purchases.includes('Keyfinder') && cachedKeyPos) {
+                    const angleToKey = Math.atan2(cachedKeyPos.y - playerY, cachedKeyPos.x - playerX);
+                    ctx.beginPath();
+                    ctx.moveTo(playerX * scale, playerY * scale);
+                    ctx.lineTo(playerX * scale + Math.cos(angleToKey) * scale * 1.2, playerY * scale + Math.sin(angleToKey) * scale * 1.2);
+                    ctx.strokeStyle = 'yellow';
+                    ctx.stroke();
+                }
             }
         }
     }
@@ -970,6 +986,7 @@ function shop() {
         { name: 'Fog Detector', desc: 'Shows where undiscovered areas are on the minimap as red squares', count: 1, cost: 5, requires: ['Minimap'] },
         { name: 'Player Positioning', desc: 'Shows where you are on the minimap as a red square', count: 1, cost: 15, requires: ['Minimap'] },
         { name: 'Surround Scan', desc: 'Upgrades the minimap to reveal a 5x5 area around you', cost: 45, count: 1, requires: ['Minimap'] },
+        { name: 'Compass Integration', desc: 'Upgrades the minimap to show the information from the compass', cost: 30, count: 1, requires: ['Minimap', 'Compass'] },
         { name: 'Speed Boost', desc: 'Increases your movement speed', cost: 15, count: 3, effect: () => player.speedBoost += 0.5 },
     ];
     const updateShop = () => {
