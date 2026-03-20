@@ -89,11 +89,16 @@ function updateSaveList() {
             }
         });
         saveName.appendChild(saveRenameButton);
-        const level = JSON.parse(save.data ?? '{}')['player']?.['level'] ?? 'Unknown';
-        const levelSpan = document.createElement('span');
-        levelSpan.className = 'save-level';
-        levelSpan.textContent = `Level ${level}`;
-        if (level !== 'Unknown') saveName.appendChild(levelSpan);
+        const saveData = JSON.parse(save.data ?? '{}');
+        const saveInfo = document.createElement('span');
+        saveInfo.className = 'save-info';
+        if (saveData['player']?.['level']) {
+            saveInfo.textContent = `Level ${saveData['player']['level']}`;
+        }
+        if (saveData['player']?.['in_shop']) {
+            saveInfo.textContent += ' (In Shop)';
+        }
+        saveName.appendChild(saveInfo);
         const saveButtons = document.createElement('div');
         saveButtons.className = 'save-buttons';
         const loadButton = document.createElement('button');

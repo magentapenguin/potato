@@ -48,3 +48,13 @@ dialog:not([open]) {
     color: inherit;
     cursor: pointer;
 }
+*, *::before, *::after {
+    box-sizing: border-box;
+    scrollbar-color: #ddd transparent;
+    accent-color: #0a6354;
+}
+input[type="checkbox"], input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
