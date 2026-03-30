@@ -1,4 +1,4 @@
-import { currentSaveIndex } from "./currentSave.js";
+import { currentSaveIndex } from "./currentSave.js"; /* inline-content './currentSave.js' file: src/currentSave.js */
 
 const saveList = document.getElementById('save-list');
 
@@ -13,28 +13,30 @@ if (currentSaveIndex() == null && localStorage.getItem('mazeSave')) {
 if ("launchQueue" in window) {
     window.launchQueue.setConsumer((launchParams) => {
         if (launchParams.files.length > 0) {
-            const file = launchParams.files[0];
-            const reader = new FileReader();
-            reader.onload = () => {
-                try {
-                    const data = reader.result;
-                    const parsedData = JSON.parse(data);
-                    if (!parsedData.save.player || !parsedData.save.level) {
-                        throw new Error('Invalid save file');
+            console.log('File launch received:', launchParams.files);
+            launchParams.files[0].getFile().then(() => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    try {
+                        const data = reader.result;
+                        const parsedData = JSON.parse(data);
+                        if (!parsedData.save.player || !parsedData.save.level) {
+                            throw new Error('Invalid save file');
+                        }
+                        const saveName = prompt('Enter a name for your save:', parsedData.name ?? 'Imported Save');
+                        if (saveName) {
+                            const saves = JSON.parse(localStorage.getItem('saves') ?? '[]');
+                            saves.push({ name: saveName, data: JSON.stringify(parsedData.save) });
+                            localStorage.setItem('saves', JSON.stringify(saves));
+                            updateSaveList();
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        alert('Failed to import save: ' + e.message);
                     }
-                    const saveName = prompt('Enter a name for your save:', parsedData.name ?? 'Imported Save');
-                    if (saveName) {
-                        const saves = JSON.parse(localStorage.getItem('saves') ?? '[]');
-                        saves.push({ name: saveName, data: JSON.stringify(parsedData.save) });
-                        localStorage.setItem('saves', JSON.stringify(saves));
-                        updateSaveList();
-                    }
-                } catch (e) {
-                    console.error(e);
-                    alert('Failed to import save: ' + e.message);
                 }
-            }
-            reader.readAsText(file);
+                reader.readAsText(file);
+            });
         }
     });
 } else if (window.__TAURI__) {
@@ -74,11 +76,29 @@ function updateSaveList() {
         const saveName = document.createElement('span');
         saveName.className = 'save-name';
         saveName.textContent = save.name;
-        const level = JSON.parse(save.data ?? '{}')['player']?.['level'] ?? 'Unknown';
-        const levelSpan = document.createElement('span');
-        levelSpan.className = 'save-level';
-        levelSpan.textContent = `Level ${level}`;
-        if (level !== 'Unknown') saveName.appendChild(levelSpan);
+        const saveRenameButton = document.createElement('button');
+        saveRenameButton.className = 'rename-button reset-button';
+        saveRenameButton.innerHTML = '<span class="sr-only">Rename</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="icon"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M416.9 85.2L372 130.1L509.9 268L554.8 223.1C568.4 209.6 576 191.2 576 172C576 152.8 568.4 134.4 554.8 120.9L519.1 85.2C505.6 71.6 487.2 64 468 64C448.8 64 430.4 71.6 416.9 85.2zM338.1 164L122.9 379.1C112.2 389.8 104.4 403.2 100.3 417.8L64.9 545.6C62.6 553.9 64.9 562.9 71.1 569C77.3 575.1 86.2 577.5 94.5 575.2L222.3 539.7C236.9 535.6 250.2 527.9 261 517.1L476 301.9L338.1 164z"/></svg>';
+        saveRenameButton.addEventListener('click', () => {
+            const newName = prompt('Enter a new name for your save:', save.name);
+            if (newName) {
+                const saves = JSON.parse(localStorage.getItem('saves') ?? '[]');
+                saves[index].name = newName;
+                localStorage.setItem('saves', JSON.stringify(saves));
+                updateSaveList();
+            }
+        });
+        saveName.appendChild(saveRenameButton);
+        const saveData = JSON.parse(save.data ?? '{}');
+        const saveInfo = document.createElement('span');
+        saveInfo.className = 'save-info';
+        if (saveData['player']?.['level']) {
+            saveInfo.textContent = `Level ${saveData['player']['level']}`;
+        }
+        if (saveData['player']?.['in_shop']) {
+            saveInfo.textContent += ' (In Shop)';
+        }
+        saveName.appendChild(saveInfo);
         const saveButtons = document.createElement('div');
         saveButtons.className = 'save-buttons';
         const loadButton = document.createElement('button');
@@ -87,7 +107,7 @@ function updateSaveList() {
         loadButton.addEventListener('click', () => {
             localStorage.setItem('currentSaveIndex', index);
             localStorage.setItem('mazeSave', save.data);
-            open('game.html', '_self');
+            open('game.html', '_self'); /* replace-in-build open('game.html', '_self')->location.hash = '/game.html' */
         });
         const deleteButton = document.createElement('button');
         deleteButton.className = 'delete-button button';
@@ -129,6 +149,19 @@ function updateSaveList() {
 }
 
 updateSaveList();
+
+document.getElementById('refresh-saves').addEventListener('click', () => {
+    updateSaveList();
+    const icon = document.querySelector('#refresh-saves .icon')
+    icon.animate([
+        { transform: 'rotate(0deg)' },
+        { transform: 'rotate(360deg)' }
+    ], {
+        duration: 800,
+        easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        fill: 'forwards'
+    });
+});
 
 document.getElementById('create-save').addEventListener('click', () => {
     const saveName = prompt('Enter a name for your save:');

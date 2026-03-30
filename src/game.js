@@ -1,5 +1,7 @@
-import { MazeBuilder } from "./MazeBuilder.js";
-import { currentSaveIndex } from "./currentSave.js";
+import { MazeBuilder } from "./MazeBuilder.js"; /* inline-content './MazeBuilder.js' file: src/MazeBuilder.js */
+
+
+import { currentSaveIndex } from "./currentSave.js"; /* inline-content './currentSave.js' file: src/currentSave.js */
 
 const canvas = document.getElementById('canvas');
 /** @type {CanvasRenderingContext2D} */
@@ -93,32 +95,30 @@ let loading = []
 
 
 const musics = {
-    spooky: loadSound('spooky.mp3'),
+    spooky: loadSound('spooky.mp3'), /* inline-content 'spooky.mp3' file: src/spooky.mp3 */
 };
 
 let coinSound = null;
-loadSound('coin.wav').then((audio) => {
+loadSound('coin.wav').then((audio) => { /* inline-content 'coin.wav' file: src/coin.wav */
     coinSound = audio;
 });
 
 let keySound = null;
-loadSound('key.wav').then((audio) => {
+loadSound('key.wav').then((audio) => { /* inline-content 'key.wav' file: src/key.wav */
     keySound = audio;
 });
 
-let footstepSounds = [];
-for (let i = 1; i <= 3; i++) {
-    loadSound(`footsteps/foot${i}.wav`).then((audio) => {
-        footstepSounds.push(audio);
-    });
-}
+
+let footstepSounds = []; 
+Promise.all([loadSound('footstep1.wav'), loadSound('footstep2.wav'), loadSound('footstep3.wav')]).then((sounds) => {/* inline-content 'footstep1.wav' file: src/footstep1.wav */ /* inline-content 'footstep2.wav' file: src/footstep2.wav */ /* inline-content 'footstep3.wav' file: src/footstep3.wav */
+    footstepSounds = sounds;
+});
 
 function playFootstep(pitch = 1) {
     if (footstepSounds.length > 0) {
         const sound = footstepSounds[Math.floor(Math.random() * footstepSounds.length)];
         sound.preservesPitch = false;
         sound.playbackRate = pitch;
-        console.log('Playing footstep sound with pitch:', pitch);
         sound.currentTime = 0;
         sound.play();
     }
@@ -132,30 +132,30 @@ let cachedKeyPos = null;
 let cachedCoinCount = 0;
 
 let wallTextureData = null;
-loadTexture('wall.png').then((data) => {
+loadTexture('wall.png').then((data) => { /* inline-content 'wall.png' file: src/wall.png */
     wallTextureData = data;
 });
 
 let doorTextureData = null;
-loadTexture('door.png').then((data) => {
+loadTexture('door.png').then((data) => { /* inline-content 'door.png' file: src/door.png */
     doorTextureData = data;
 });
 
 let entranceTextureData = null;
-loadTexture('entrydoor.png').then((data) => {
+loadTexture('entrydoor.png').then((data) => { /* inline-content 'entrydoor.png' file: src/entrydoor.png */
     entranceTextureData = data;
 });
 
 let keyTextureData = null;
 let keyImage;
-loadTexture('key.png', true).then(({ data, image }) => {
+loadTexture('key.png', true).then(({ data, image }) => { /* inline-content 'key.png' file: src/key.png */
     keyImage = image;
     keyTextureData = data;
 });
 
 let coinTextureData = null;
 let coinImage;
-loadTexture('coin.png', true).then(({ data, image }) => {
+loadTexture('coin.png', true).then(({ data, image }) => { /* inline-content 'coin.png' file: src/coin.png */
     coinImage = image;
     coinTextureData = data;
 });
@@ -176,7 +176,7 @@ document.getElementById('settings-menu').addEventListener('close', () => {
 });
 
 if (!localStorage.getItem('mazeSave')) {
-    location.assign(location.pathname.replace('game.html', ''));
+    location.assign(location.pathname.replace('game.html', '')); /* replace-in-build location.assign(location.pathname.replace('game.html', ''))->location.hash = '/index.html' */
     throw new Error('No save found, redirecting to menu');
 }
 
@@ -435,7 +435,7 @@ function loadTexture(src, includeImage = false) {
 }
 
 const loaded = Promise.all(loading).then(() => {
-    console.log('All textures loaded');
+    console.log('All textures loaded'); /* remove-in-build */
 }).catch((err) => {
     alert('Error loading textures: ' + err.message);
 });
@@ -488,7 +488,7 @@ function removeSpriteAt(gridX, gridY) {
 
 function generateLevel(size = 10) {
     player.observedCells = new Set();
-    console.log('Generating level with size:', size, currentLevelSize(player.level));
+    console.log('Generating level with size:', size, currentLevelSize(player.level)); /* remove-in-build */
     const mazeBuilder = new MazeBuilder(size, size);
     mazeBuilder.placeKey();
     mazeBuilder.placeCoins(size);
@@ -852,13 +852,29 @@ function render() {
         if (player.inventory.purchases.includes('Player Positioning')) {
             ctx.fillStyle = 'red';
             ctx.fillRect(playerX * scale - player.size * scale / 2, playerY * scale - player.size * scale / 2, player.size * scale, player.size * scale);
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 2;
             ctx.strokeStyle = 'red';
-            if (player.inventory.purchases.includes('Compass')) {
+            if (player.inventory.purchases.includes('Compass Integration')) {
                 ctx.beginPath();
                 ctx.moveTo(playerX * scale, playerY * scale);
                 ctx.lineTo(playerX * scale + Math.cos(playerAngle) * scale, playerY * scale + Math.sin(playerAngle) * scale);
                 ctx.stroke();
+                if (player.inventory.purchases.includes('Exit Tracker') && cachedExitPos) {
+                    const angleToExit = Math.atan2(cachedExitPos.y - playerY, cachedExitPos.x - playerX);
+                    ctx.beginPath();
+                    ctx.moveTo(playerX * scale, playerY * scale);
+                    ctx.lineTo(playerX * scale + Math.cos(angleToExit) * scale * 1.3, playerY * scale + Math.sin(angleToExit) * scale * 1.3);
+                    ctx.strokeStyle = 'lime';
+                    ctx.stroke();
+                }
+                if (player.inventory.purchases.includes('Keyfinder') && cachedKeyPos) {
+                    const angleToKey = Math.atan2(cachedKeyPos.y - playerY, cachedKeyPos.x - playerX);
+                    ctx.beginPath();
+                    ctx.moveTo(playerX * scale, playerY * scale);
+                    ctx.lineTo(playerX * scale + Math.cos(angleToKey) * scale * 1.2, playerY * scale + Math.sin(angleToKey) * scale * 1.2);
+                    ctx.strokeStyle = 'yellow';
+                    ctx.stroke();
+                }
             }
         }
     }
@@ -970,6 +986,7 @@ function shop() {
         { name: 'Fog Detector', desc: 'Shows where undiscovered areas are on the minimap as red squares', count: 1, cost: 5, requires: ['Minimap'] },
         { name: 'Player Positioning', desc: 'Shows where you are on the minimap as a red square', count: 1, cost: 15, requires: ['Minimap'] },
         { name: 'Surround Scan', desc: 'Upgrades the minimap to reveal a 5x5 area around you', cost: 45, count: 1, requires: ['Minimap'] },
+        { name: 'Compass Integration', desc: 'Upgrades the minimap to show the information from the compass', cost: 30, count: 1, requires: ['Minimap', 'Compass'] },
         { name: 'Speed Boost', desc: 'Increases your movement speed', cost: 15, count: 3, effect: () => player.speedBoost += 0.5 },
     ];
     const updateShop = () => {
@@ -1236,7 +1253,6 @@ function update(deltaTime) {
 
     // Play footstep sounds
     if ((player.vx * player.vx + player.vy * player.vy) > 0.01) {
-        console.log('Moving', performance.now() - lastFootstep > 400 / (moveSpeed / 2.5));
         if (performance.now() - lastFootstep > 400 / (moveSpeed / 2.5)) {
             lastFootstep = performance.now();
             playFootstep(1);
@@ -1265,7 +1281,7 @@ function update(deltaTime) {
             removeSpriteAt(key.x, key.y);
             level[key.y][key.x] = ' ';
             player.inventory.key++;
-            console.log('Key collected! Total:', player.inventory.key);
+            console.log('Key collected! Total:', player.inventory.key); /* remove-in-build */ 
             if (keySound) {
                 keySound.currentTime = 0;
                 keySound.play();
@@ -1279,7 +1295,7 @@ function update(deltaTime) {
             removeSpriteAt(coin.x, coin.y);
             level[coin.y][coin.x] = ' ';
             player.inventory.coins++;
-            console.log('Coin collected! Total:', player.inventory.coins);
+            console.log('Coin collected! Total:', player.inventory.coins); /* remove-in-build */
             if (coinSound) {
                 coinSound.currentTime = 0;
                 coinSound.play();
