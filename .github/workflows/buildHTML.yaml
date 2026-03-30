@@ -1,0 +1,25 @@
+name: Build Files for Distribution
+on: 
+    push:
+        branches: ["main"]
+    workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: '3.x'
+            - name: Run build script
+              run: |
+                  python build.py
+            - name: Add built files release
+              uses: softprops/action-gh-release@v1
+              with:
+                files: dist/maze_runner.html
+            
