@@ -104,15 +104,22 @@ def convert_html_to_page(file_path):
     body = soup.body
     return str(body), important_head
 
-def combine_pages(title: str, menu: str, menu_head: str, game: str, game_head: str):
-    print(f"\033[36;1mCompressing menu content...\033[0m")
-    menu = base64.b64encode(gzip.compress(menu.encode('utf-8'))).decode('utf-8').replace('"','\\"').replace('\n', '\\n')
-    print(f"\033[36;1mCompressing menu head...\033[0m")
-    menu_head = base64.b64encode(gzip.compress(menu_head.encode('utf-8'))).decode('utf-8').replace('"','\\"').replace('\n', '\\n')
-    print(f"\033[36;1mCompressing game content...\033[0m")
-    game = base64.b64encode(gzip.compress(game.encode('utf-8'))).decode('utf-8').replace('"','\\"').replace('\n', '\\n')
-    print(f"\033[36;1mCompressing game head...\033[0m")
-    game_head = base64.b64encode(gzip.compress(game_head.encode('utf-8'))).decode('utf-8').replace('"','\\"').replace('\n', '\\n')
+def combine_pages(title: str, menu: str, menu_head: str, game: str, game_head: str, *, compress=True, no_js_msg="Please enable JavaScript to view the content."):
+    if compress:
+        print(f"\033[36;1mCompressing menu content...\033[0m")
+        menu = base64.b64encode(gzip.compress(menu.encode('utf-8'))).decode('utf-8')
+        print(f"\033[36;1mCompressing menu head...\033[0m")
+        menu_head = base64.b64encode(gzip.compress(menu_head.encode('utf-8'))).decode('utf-8')
+        print(f"\033[36;1mCompressing game content...\033[0m")
+        game = base64.b64encode(gzip.compress(game.encode('utf-8'))).decode('utf-8')
+        print(f"\033[36;1mCompressing game head...\033[0m")
+        game_head = base64.b64encode(gzip.compress(game_head.encode('utf-8'))).decode('utf-8')
+    else:
+        print(f"\033[33mSkipping compression as per options\033[0m")
+        menu = base64.b64encode(menu.encode('utf-8')).decode('utf-8')
+        menu_head = base64.b64encode(menu_head.encode('utf-8')).decode('utf-8')
+        game = base64.b64encode(game.encode('utf-8')).decode('utf-8')
+        game_head = base64.b64encode(game_head.encode('utf-8')).decode('utf-8')
     NAVIGATION_SCRIPT = """
     <script>
         const documents = {
@@ -122,10 +129,6 @@ def combine_pages(title: str, menu: str, menu_head: str, game: str, game_head: s
         function executeScripts(container) {
             const scripts = container.querySelectorAll('script');
             scripts.forEach(oldScript => {
-                if (oldScript.type && oldScript.type === 'module') {
-                    import(oldScript.src).catch(err => console.error('Error loading module script:', err));
-                    return;
-                }
                 const newScript = document.createElement('script');
                 // Copy all attributes
                 for (const attr of oldScript.attributes) {
@@ -139,8 +142,13 @@ def combine_pages(title: str, menu: str, menu_head: str, game: str, game_head: s
                 oldScript.parentNode.replaceChild(newScript, oldScript);
             });
         }
+        const COMPRESSION_ENABLED = {compression_enabled};
         async function decompressAndDecode(data) {
             const compressedData = Uint8Array.fromBase64(data)
+            if (!COMPRESSION_ENABLED) {
+                const decoder = new TextDecoder();
+                return decoder.decode(compressedData);
+            }
             const blob = new Blob([compressedData], { type: 'application/gzip' });
             const ds = new DecompressionStream("gzip");
             const decompressedStream = blob.stream().pipeThrough(ds);
@@ -151,7 +159,6 @@ def combine_pages(title: str, menu: str, menu_head: str, game: str, game_head: s
             loader.style.display = 'block';
             loader.textContent = 'Loading...';
             loaderBg.style.display = 'block';
-            console.log('Hash changed, loading content for hash:', window.location.hash);
             const hash = window.location.hash.substring(1);
             if (!hash) {
                 window.location.hash = '/index.html';
@@ -206,7 +213,7 @@ def combine_pages(title: str, menu: str, menu_head: str, game: str, game_head: s
             document.body.appendChild(loaderBg);
         });
     </script>
-    """.replace('{menu}', menu).replace('{menu_head}', menu_head).replace('{game}', game).replace('{game_head}', game_head)
+    """.replace('{menu}', menu).replace('{menu_head}', menu_head).replace('{game}', game).replace('{game_head}', game_head).replace('{compression_enabled}', 'true' if compress else 'false')
     document = f"""<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -217,7 +224,7 @@ def combine_pages(title: str, menu: str, menu_head: str, game: str, game_head: s
         <div id="head-content"></div>
     </head>
     <body style="background-color:black;color:white;">
-        <noscript>Please enable JavaScript to view the content.</noscript>
+        <noscript>{no_js_msg}</noscript>
         <div id="content"></div>
     </body>
     </html>"""
@@ -225,6 +232,14 @@ def combine_pages(title: str, menu: str, menu_head: str, game: str, game_head: s
     return document
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description='Build the game into a single HTML file')
+    parser.add_argument('--output', '-o', default='dist/index.html', help='Output file path')
+    parser.add_argument('--title', default='2.5d Maze Runner', help='Title of the generated HTML page')
+    parser.add_argument('--no-compress', action='store_true', help='Disable gzip compression for embedded content (results in larger file size but faster loading)')
+    args = parser.parse_args()
+    if os.path.exists(args.output):
+        print(f"\033[33mWarning: Output file {args.output} already exists and will be overwritten.\033[0m")
     menu_content, menu_head = convert_html_to_page('src/index.html')
     game_content, game_head = convert_html_to_page('src/game.html')
     print(f"\033[96mBuilding menu content\033[0m")
@@ -235,10 +250,10 @@ def main():
     game_content = inline_resources(replace_in_build(game_content))
     print(f"\033[96mBuilding game head\033[0m")
     game_head = inline_resources(replace_in_build(game_head))
-    combined = combine_pages('2.5d Maze Runner', menu_content, menu_head, game_content, game_head)
-    os.makedirs('dist', exist_ok=True)
-    print(f"\033[34;1mWriting combined content to dist/maze_runner.html\033[0m")
-    with open('dist/maze_runner.html', 'w', encoding='utf-8') as f:
+    combined = combine_pages(args.title, menu_content, menu_head, game_content, game_head, compress=not args.no_compress)
+    os.makedirs(os.path.dirname(args.output), exist_ok=True)
+    print(f"\033[34;1mWriting combined content to {args.output}\033[0m")
+    with open(args.output, 'w', encoding='utf-8') as f:
         f.write(combined)
 
 if __name__ == "__main__":
