@@ -17,9 +17,11 @@ def convert_to_data_uri_string(file_content: str, mime_type: str):
 def replace_in_build(data: str):
     html_comment_pattern = re.compile(r"<!-- replace-in-build (.*?)->(.*?) -->") 
     generic_pattern = re.compile(r"\/\* replace-in-build (.*?)->(.*?) \*\/")
+    remove_in_build_pattern = re.compile(r"\/\* remove-in-build \*\/")
+    html_remove_in_build_pattern = re.compile(r"<!-- remove-in-build -->")
     while True:
         match = None
-        for pattern in [generic_pattern, html_comment_pattern]:
+        for pattern in [generic_pattern, html_comment_pattern, remove_in_build_pattern, html_remove_in_build_pattern]:
             match = pattern.search(data)
             if match:
                 break
@@ -29,6 +31,11 @@ def replace_in_build(data: str):
         line_end = data.find('\n', match.end())
         if line_end == -1:
             line_end = len(data)
+        if "remove-in-build" in match.group(0):
+            line = data[line_start:line_end]
+            print(f"\033[2;31mRemoving in build: '{line}'\033[0m")
+            data = data.replace(line, '')
+            continue
         print(f"\033[2mReplacing in build: '{match.group(1)}' with '{match.group(2)}'\033[0m")
         line = data[line_start:line_end]
         data = data.replace(line, line.replace(match.group(0), '').replace(match.group(1), match.group(2)))

@@ -119,7 +119,6 @@ function playFootstep(pitch = 1) {
         const sound = footstepSounds[Math.floor(Math.random() * footstepSounds.length)];
         sound.preservesPitch = false;
         sound.playbackRate = pitch;
-        console.log('Playing footstep sound with pitch:', pitch);
         sound.currentTime = 0;
         sound.play();
     }
@@ -436,7 +435,7 @@ function loadTexture(src, includeImage = false) {
 }
 
 const loaded = Promise.all(loading).then(() => {
-    console.log('All textures loaded');
+    console.log('All textures loaded'); /* remove-in-build */
 }).catch((err) => {
     alert('Error loading textures: ' + err.message);
 });
@@ -489,7 +488,7 @@ function removeSpriteAt(gridX, gridY) {
 
 function generateLevel(size = 10) {
     player.observedCells = new Set();
-    console.log('Generating level with size:', size, currentLevelSize(player.level));
+    console.log('Generating level with size:', size, currentLevelSize(player.level)); /* remove-in-build */
     const mazeBuilder = new MazeBuilder(size, size);
     mazeBuilder.placeKey();
     mazeBuilder.placeCoins(size);
@@ -1254,7 +1253,6 @@ function update(deltaTime) {
 
     // Play footstep sounds
     if ((player.vx * player.vx + player.vy * player.vy) > 0.01) {
-        console.log('Moving', performance.now() - lastFootstep > 400 / (moveSpeed / 2.5));
         if (performance.now() - lastFootstep > 400 / (moveSpeed / 2.5)) {
             lastFootstep = performance.now();
             playFootstep(1);
@@ -1283,7 +1281,7 @@ function update(deltaTime) {
             removeSpriteAt(key.x, key.y);
             level[key.y][key.x] = ' ';
             player.inventory.key++;
-            console.log('Key collected! Total:', player.inventory.key);
+            console.log('Key collected! Total:', player.inventory.key); /* remove-in-build */ 
             if (keySound) {
                 keySound.currentTime = 0;
                 keySound.play();
@@ -1297,7 +1295,7 @@ function update(deltaTime) {
             removeSpriteAt(coin.x, coin.y);
             level[coin.y][coin.x] = ' ';
             player.inventory.coins++;
-            console.log('Coin collected! Total:', player.inventory.coins);
+            console.log('Coin collected! Total:', player.inventory.coins); /* remove-in-build */
             if (coinSound) {
                 coinSound.currentTime = 0;
                 coinSound.play();
