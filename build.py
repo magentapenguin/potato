@@ -2,6 +2,30 @@
 import os, bs4, re
 import base64, gzip
 import mimetypes
+import logging
+
+class ColorFilter(logging.Filter):
+    def filter(self, record):
+        colors = {
+            10: '\x1b[2m', # DEBUG
+            20: '\x1b[32m', # INFO
+            30: '\x1b[33m', # WARNING
+            40: '\x1b[31m', # ERROR
+            50: '\x1b[1;41m', # CRITICAL
+        }
+        brightcolors = {
+            10: '\x1b[90;1m', # DEBUG
+            20: '\x1b[92;1m', # INFO
+            30: '\x1b[93;1m', # WARNING
+            40: '\x1b[91;1m', # ERROR
+            50: '\x1b[91;1m', # CRITICAL
+        }
+        record.color = colors.get(record.levelno, '')
+        record.brightcolor = brightcolors.get(record.levelno, '')
+        return True
+
+logging.basicConfig(format='\x1b[2m[\x1b[3m%(asctime)s\x1b[23m]\x1b[0m%(color)s %(brightcolor)s[%(levelname)s]\x1b[0m%(color)s %(message)s\x1b[0m', level=logging.WARNING, datefmt='%Y-%m-%d %H:%M:%S')
+
 
 def convert_to_data_uri(file_path):
     mime_type, _ = mimetypes.guess_type(file_path)
