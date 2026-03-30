@@ -1,4 +1,4 @@
-import { currentSaveIndex } from "./currentSave.js";
+import { currentSaveIndex } from "./currentSave.js"; /* inline-content './currentSave.js' file: src/currentSave.js */
 
 const saveList = document.getElementById('save-list');
 
@@ -107,7 +107,7 @@ function updateSaveList() {
         loadButton.addEventListener('click', () => {
             localStorage.setItem('currentSaveIndex', index);
             localStorage.setItem('mazeSave', save.data);
-            open('game.html', '_self');
+            open('game.html', '_self'); /* replace-in-build game.html->#/game.html */
         });
         const deleteButton = document.createElement('button');
         deleteButton.className = 'delete-button button';
@@ -149,6 +149,9 @@ function updateSaveList() {
 }
 
 updateSaveList();
+setTimeout(() => {
+    updateSaveList();
+});
 
 document.getElementById('create-save').addEventListener('click', () => {
     const saveName = prompt('Enter a name for your save:');

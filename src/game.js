@@ -1,5 +1,7 @@
-import { MazeBuilder } from "./MazeBuilder.js";
-import { currentSaveIndex } from "./currentSave.js";
+import { MazeBuilder } from "./MazeBuilder.js"; /* inline-content './MazeBuilder.js' file: src/MazeBuilder.js */
+
+
+import { currentSaveIndex } from "./currentSave.js"; /* inline-content './currentSave.js' file: src/currentSave.js */
 
 const canvas = document.getElementById('canvas');
 /** @type {CanvasRenderingContext2D} */
@@ -93,25 +95,24 @@ let loading = []
 
 
 const musics = {
-    spooky: loadSound('spooky.mp3'),
+    spooky: loadSound('spooky.mp3'), /* inline-content 'spooky.mp3' file: src/spooky.mp3 */
 };
 
 let coinSound = null;
-loadSound('coin.wav').then((audio) => {
+loadSound('coin.wav').then((audio) => { /* inline-content 'coin.wav' file: src/coin.wav */
     coinSound = audio;
 });
 
 let keySound = null;
-loadSound('key.wav').then((audio) => {
+loadSound('key.wav').then((audio) => { /* inline-content 'key.wav' file: src/key.wav */
     keySound = audio;
 });
 
-let footstepSounds = [];
-for (let i = 1; i <= 3; i++) {
-    loadSound(`footsteps/foot${i}.wav`).then((audio) => {
-        footstepSounds.push(audio);
-    });
-}
+
+let footstepSounds = []; 
+Promise.all([loadSound('footstep1.wav'), loadSound('footstep2.wav'), loadSound('footstep3.wav')]).then((sounds) => {/* inline-content 'footstep1.wav' file: src/footstep1.wav */ /* inline-content 'footstep2.wav' file: src/footstep2.wav */ /* inline-content 'footstep3.wav' file: src/footstep3.wav */
+    footstepSounds = sounds;
+});
 
 function playFootstep(pitch = 1) {
     if (footstepSounds.length > 0) {
@@ -132,30 +133,30 @@ let cachedKeyPos = null;
 let cachedCoinCount = 0;
 
 let wallTextureData = null;
-loadTexture('wall.png').then((data) => {
+loadTexture('wall.png').then((data) => { /* inline-content 'wall.png' file: src/wall.png */
     wallTextureData = data;
 });
 
 let doorTextureData = null;
-loadTexture('door.png').then((data) => {
+loadTexture('door.png').then((data) => { /* inline-content 'door.png' file: src/door.png */
     doorTextureData = data;
 });
 
 let entranceTextureData = null;
-loadTexture('entrydoor.png').then((data) => {
+loadTexture('entrydoor.png').then((data) => { /* inline-content 'entrydoor.png' file: src/entrydoor.png */
     entranceTextureData = data;
 });
 
 let keyTextureData = null;
 let keyImage;
-loadTexture('key.png', true).then(({ data, image }) => {
+loadTexture('key.png', true).then(({ data, image }) => { /* inline-content 'key.png' file: src/key.png */
     keyImage = image;
     keyTextureData = data;
 });
 
 let coinTextureData = null;
 let coinImage;
-loadTexture('coin.png', true).then(({ data, image }) => {
+loadTexture('coin.png', true).then(({ data, image }) => { /* inline-content 'coin.png' file: src/coin.png */
     coinImage = image;
     coinTextureData = data;
 });
@@ -176,7 +177,7 @@ document.getElementById('settings-menu').addEventListener('close', () => {
 });
 
 if (!localStorage.getItem('mazeSave')) {
-    location.assign(location.pathname.replace('game.html', ''));
+    location.assign(location.pathname.replace('game.html', '')); /* replace-in-build location.pathname.replace('game.html', '')->location.hash.replace('game.html', 'index.html') */
     throw new Error('No save found, redirecting to menu');
 }
 

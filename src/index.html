@@ -4,8 +4,8 @@
     <meta charset='utf-8'>
     <title>Potato Main Menu</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <link rel='stylesheet' type='text/css' href='style.css'>
-    <link rel="manifest" href="manifest.webmanifest">
+    <link rel='stylesheet' type='text/css' href='style.css'> <!-- inline-content 'style.css' file: src/style.css -->
+    <link rel="manifest" href="manifest.webmanifest"> <!-- replace-in-build <link rel="manifest" href="manifest.webmanifest">-> -->
     <style> 
         #save-list-empty {
             display: none;
@@ -59,6 +59,6 @@
         <div id="save-list-empty" style="text-align: center; color: #888;">No saves found. Create a new save to get started!</div>
         <div id='save-list'></div>
     </div>
-    <script src='menu.js' type="module"></script>
+    <script src='menu.js' type="module"></script> <!-- inline-content 'menu.js' file: src/menu.js -->
 </body>
 </html>

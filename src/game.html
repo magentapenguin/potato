@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2.5d Maze Runner</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="favicon.png"> <!-- inline-content 'favicon.png' file: src/favicon.png -->
+    <link rel="stylesheet" href="style.css"> <!-- inline-content 'style.css' file: src/style.css -->
     <style>
         #shop {
             display: flex;
@@ -92,7 +92,7 @@
             gap: 10px;
         }
     </style>
-    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="manifest" href="manifest.webmanifest"> <!-- replace-in-build <link rel="manifest" href="manifest.webmanifest">-> -->
 </head>
 
 <body>
@@ -156,17 +156,17 @@
     <dialog id="shop"
         style="position: absolute; inset: 0; width: 100%; overflow-y: auto; border-radius: 5px; background-color: black; border: 1px #2c2d35 solid; padding: 10px; color: white;">
         <h1>Welcome to the shop!</h1>
-        <p style="position: sticky; top: 0;">You have <span id="coin-count"></span> coins.</p>
+        <p style="position: sticky; top: 0; z-index: 10;">You have <span id="coin-count"></span> coins.</p>
         <div id="shop-items"></div>
         <div>
-            <button class="button" id="leave-shop">Leave Shop</button>
+            <button class="button" id="leave-shop" style="z-index: 10;">Leave Shop</button>
         </div>
     </dialog>
     <canvas id="canvas" width="720" height="480" style="width: auto;"></canvas>
-    <a class="button" href="index.html" style="text-decoration: none;">
+    <a class="button" href="index.html" style="text-decoration: none;"> <!-- replace-in-build index.html->#/index.html -->
         Menu
     </a>
-    <script src="game.js" type="module"></script>
+    <script src="game.js" type="module"></script> <!-- inline-content 'game.js' file: src/game.js -->
 </body>
 
 </html>
