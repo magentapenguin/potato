@@ -176,7 +176,7 @@ document.getElementById('settings-menu').addEventListener('close', () => {
 });
 
 if (!localStorage.getItem('mazeSave')) {
-    location.assign(location.pathname.replace('game.html', '')); /* replace-in-build location.pathname.replace('game.html', '')->location.hash.replace('game.html', 'index.html') */
+    location.assign(location.pathname.replace('game.html', '')); /* replace-in-build location.assign(location.pathname.replace('game.html', ''))->location.hash = '/index.html' */
     throw new Error('No save found, redirecting to menu');
 }
 

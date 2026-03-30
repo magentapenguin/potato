@@ -122,6 +122,10 @@ def combine_pages(title: str, menu: str, menu_head: str, game: str, game_head: s
         function executeScripts(container) {
             const scripts = container.querySelectorAll('script');
             scripts.forEach(oldScript => {
+                if (oldScript.type && oldScript.type === 'module') {
+                    import(oldScript.src).catch(err => console.error('Error loading module script:', err));
+                    return;
+                }
                 const newScript = document.createElement('script');
                 // Copy all attributes
                 for (const attr of oldScript.attributes) {
@@ -147,6 +151,7 @@ def combine_pages(title: str, menu: str, menu_head: str, game: str, game_head: s
             loader.style.display = 'block';
             loader.textContent = 'Loading...';
             loaderBg.style.display = 'block';
+            console.log('Hash changed, loading content for hash:', window.location.hash);
             const hash = window.location.hash.substring(1);
             if (!hash) {
                 window.location.hash = '/index.html';
@@ -178,7 +183,7 @@ def combine_pages(title: str, menu: str, menu_head: str, game: str, game_head: s
                 alert('An error occurred while loading the page. Please try refreshing or check the console for details.');
             });
         }
-        window.addEventListener('hashchange', onHashChange);
+        window.addEventListener('hashchange', location.reload.bind(location));
         window.addEventListener('load', onHashChange);
         const loader = document.createElement('div');
         const loaderBg = document.createElement('div');
