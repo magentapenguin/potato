@@ -1,5 +1,6 @@
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 use tauri_plugin_updater::UpdaterExt;
+use tauri::Emitter;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -19,19 +20,8 @@ pub fn run() {
       Ok(())
     })
     .build(tauri::generate_context!())
-    .unwrap()
-    .run(|app_handle, event| {
-      // macOS: file open events come through RunEvent::Opened
-      if let tauri::RunEvent::Opened { urls } = event {
-        let paths: Vec<String> = urls.iter()
-          .filter_map(|u| u.to_file_path().ok())
-          .filter_map(|p| p.to_str().map(|s| s.to_string()))
-          .collect();
-        for path in paths {
-          app_handle.emit("file-opened", &path).ok();
-        }
-      }
-    });
+    .expect("error while building tauri application")
+    .run(|_app_handle, _event| {});
 }
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
