@@ -189,10 +189,14 @@ def combine_pages(
     NAVIGATION_SCRIPT = (
         """
     <script>
-        const documents = {
+        let documents = {
             '/index.html': ["{menu}", "{menu_head}"],
             '/game.html': ["{game}", "{game_head}"]
         };
+        const COMPRESSION_ENABLED = {compression_enabled};
+        if (!COMPRESSION_ENABLED) {
+            console.warn('No compression, will not auto-update');
+        }
         function executeScripts(container) {
             const scripts = container.querySelectorAll('script');
             scripts.forEach(oldScript => {
@@ -209,7 +213,41 @@ def combine_pages(
                 oldScript.parentNode.replaceChild(newScript, oldScript);
             });
         }
-        const COMPRESSION_ENABLED = {compression_enabled};
+        async function checkForUpdates() {
+            if (!COMPRESSION_ENABLED) return;
+            try {
+                const response = await fetch("{AUTO_UPDATE_URL}");
+                if (!response.ok) {
+                    throw new Error(`Failed to check for updates: ${response.status} ${response.statusText}`);
+                }
+                const data = await response.json();
+                const assets = data["assets"] ?? [];
+                const indexAsset = assets.find(asset => asset.name === "index.html")["url"];
+                const indexResponse = await fetch(indexAsset, {
+                    headers: {
+                        "Accept": "application/octet-stream"
+                    },
+                    // Allow redirects in case the asset URL is a redirect (e.g. GitHub's CDN)
+                    redirect: "follow",
+                    cors: "cors"
+                });
+                if (!indexResponse.ok) {
+                    throw new Error(`Failed to download update: ${indexResponse.status} ${indexResponse.statusText}`);
+                }
+                const updatedContent = await indexResponse.text();
+                // const match = /&lt;script>\\s*(let|const) documents = {\\s*'\\/index\\.html':\\s*\\["(.*?)", "(.*?)"\\],\\s*'\\/game\\.html':\\s*\\["(.*?)", "(.*?)"\\]/gm.exec(updatedContent);
+                if (match) {
+                    const [_, __, newMenu, newMenuHead, newGame, newGameHead] = match;
+                    documents['/index.html'] = [newMenu, newMenuHead];
+                    documents['/game.html'] = [newGame, newGameHead];
+                    console.log('Content updated from latest release');
+                } else {
+                    throw new Error('Failed to parse updated content');
+                }
+            } catch (err) {
+                console.error('Error checking for updates:', err);
+            }
+        }
         async function decompressAndDecode(data, onProgress) {
             const compressedData = Uint8Array.fromBase64(data);
             if (!COMPRESSION_ENABLED) {
@@ -324,6 +362,7 @@ def combine_pages(
         .replace("{game}", game)
         .replace("{game_head}", game_head)
         .replace("{compression_enabled}", "true" if compression_enabled else "false")
+        .replace("{AUTO_UPDATE_URL}", "https://api.github.com/repos/magentapenguin/potato/releases/latest")
     )
     document = f"""<!DOCTYPE html>
     <html lang="en">
