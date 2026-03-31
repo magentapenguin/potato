@@ -61,7 +61,7 @@ bc.addEventListener("message", (event) => {
     }
 });
 
-if (updateManager) {
+if (window.updateManager) {
     updateManager.on('update-available', () => {
         updateManager.showUpdateNotification();
     });

@@ -78,7 +78,7 @@ setInterval(() => {
 bc.postMessage('tabs_open');
 
 
-if (updateManager) {
+if (window.updateManager) {
     updateManager.on('update-available', () => {
         updateManager.showUpdateNotification();
     });
