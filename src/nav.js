@@ -53,7 +53,7 @@ async function checkForUpdates() {
         throw new Error(`Failed to download update: ${indexResponse.status} ${indexResponse.statusText}`);
     }
     const updatedContent = await indexResponse.text();
-    const match = /<script>\s*(let|const) documents = {\s*'\/index\.html':\\s*\\["(.*?)", "(.*?)"\\],\\s*'\/game\.html':\s*\["(.*?)", "(.*?)"\]/gm.exec(updatedContent);
+    const match = /<script>\s*(let|const) documents = {\s*'\/index\.html':\s*\["(.*?)", "(.*?)"\],\s*'\/game\.html':\s*\["(.*?)", "(.*?)"\]/gm.exec(updatedContent);
     if (match) {
         const [_, __, newMenu, newMenuHead, newGame, newGameHead] = match;
         if (newMenu && newMenuHead && newGame && newGameHead) {
