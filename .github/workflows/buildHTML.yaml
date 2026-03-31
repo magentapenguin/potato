@@ -23,19 +23,29 @@ jobs:
             - name: Run build script
               run: |
                   python build.py
-            - name: Add built files to dist branch
-              uses: EndBug/add-and-commit@v9
-              with:
-                  default_author: github_actions
-                  message: "Add built files for release ${{ github.event.release.tag_name }}"
-                  branch: dist
-                  add: "dist/index.html"
             - name: Upload built files to latest release
               run: |
                 LATEST_TAG=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
                 gh release upload "$LATEST_TAG" dist/index.html --clobber
               env:
                 GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Save built file
+              run: |
+                  cp dist/index.html /tmp/index.html
+            - name: Push to dist branch
+              run: |
+                  git fetch origin dist || true
+                  git checkout dist || git checkout --orphan dist
+                  # Clean the working tree
+                  git rm -rf . || true
+                  # Copy the built file back
+                  mkdir -p dist
+                  cp /tmp/index.html dist/index.html
+                  git add dist/index.html
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+                  git commit -m "Add built files for ${{ github.event.release.tag_name || github.sha }}" || echo "No changes to commit"
+                  git push origin dist
 
-           
             
+              
