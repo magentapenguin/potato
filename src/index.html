@@ -4,7 +4,7 @@
     <meta charset='utf-8'>
     <title>Potato Main Menu</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <link rel='stylesheet' type='text/css' href='style.css'> <!-- inline-content 'style.css' file: src/style.css -->
+    <link rel='stylesheet' type='text/css' href='style.css'> <!-- inline-content 'style.css' file: style.css -->
     <link rel="manifest" href="manifest.webmanifest"> <!-- remove-in-build -->
     <style> 
         #save-list-empty {
@@ -50,6 +50,10 @@
     </style>
 </head>
 <body>
+    <noscript><p style="color:#e66;background-color:#300;padding:10px;margin-inline:10px;border-radius:10px;border:1px solid #e654;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" style="width:20px;height:20px;vertical-align:-5px;margin-inline-end:6px;">
+  <path fill-rule="evenodd" d="M6.701 2.25c.577-1 2.02-1 2.598 0l5.196 9a1.5 1.5 0 0 1-1.299 2.25H2.804a1.5 1.5 0 0 1-1.3-2.25l5.197-9ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 1 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" />
+</svg>Please enable JavaScript to view the content.</p></noscript>
     <div id='main-menu' style='display: flex; flex-direction: column; gap: 20px; padding: 20px; width: clamp(300px, 80%, 800px); margin: auto;'>
         <h1 style="text-align: center;">Potato</h1>
         <div style="display: flex; gap: 10px; justify-content: center; anchor-name: --buttons;">
@@ -60,6 +64,6 @@
         <div id="save-list-empty" style="text-align: center; color: #888;">No saves found. Create a new save to get started!</div>
         <div id='save-list'></div>
     </div>
-    <script src='menu.js' type="module"></script> <!-- inline-content 'menu.js' file: src/menu.js -->
+    <script src='menu.js' type="module"></script> <!-- inline-content 'menu.js' file: menu.js -->
 </body>
 </html>

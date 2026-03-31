@@ -1,7 +1,7 @@
-import { MazeBuilder } from "./MazeBuilder.js"; /* inline-content './MazeBuilder.js' file: src/MazeBuilder.js */
+import { MazeBuilder } from "./MazeBuilder.js"; /* inline-content './MazeBuilder.js' file: MazeBuilder.js */
 
 
-import { currentSaveIndex } from "./currentSave.js"; /* inline-content './currentSave.js' file: src/currentSave.js */
+import { currentSaveIndex } from "./currentSave.js"; /* inline-content './currentSave.js' file: currentSave.js */
 
 const canvas = document.getElementById('canvas');
 /** @type {CanvasRenderingContext2D} */
@@ -95,22 +95,22 @@ let loading = []
 
 
 const musics = {
-    spooky: loadSound('spooky.mp3'), /* inline-content 'spooky.mp3' file: src/spooky.mp3 */
+    spooky: loadSound('spooky.mp3'), /* inline-content 'spooky.mp3' file: spooky.mp3 */
 };
 
 let coinSound = null;
-loadSound('coin.wav').then((audio) => { /* inline-content 'coin.wav' file: src/coin.wav */
+loadSound('coin.wav').then((audio) => { /* inline-content 'coin.wav' file: coin.wav */
     coinSound = audio;
 });
 
 let keySound = null;
-loadSound('key.wav').then((audio) => { /* inline-content 'key.wav' file: src/key.wav */
+loadSound('key.wav').then((audio) => { /* inline-content 'key.wav' file: key.wav */
     keySound = audio;
 });
 
 
 let footstepSounds = []; 
-Promise.all([loadSound('footstep1.wav'), loadSound('footstep2.wav'), loadSound('footstep3.wav')]).then((sounds) => {/* inline-content 'footstep1.wav' file: src/footstep1.wav */ /* inline-content 'footstep2.wav' file: src/footstep2.wav */ /* inline-content 'footstep3.wav' file: src/footstep3.wav */
+Promise.all([loadSound('footstep1.wav'), loadSound('footstep2.wav'), loadSound('footstep3.wav')]).then((sounds) => {/* inline-content 'footstep1.wav' file: footstep1.wav */ /* inline-content 'footstep2.wav' file: footstep2.wav */ /* inline-content 'footstep3.wav' file: footstep3.wav */
     footstepSounds = sounds;
 });
 
@@ -132,30 +132,30 @@ let cachedKeyPos = null;
 let cachedCoinCount = 0;
 
 let wallTextureData = null;
-loadTexture('wall.png').then((data) => { /* inline-content 'wall.png' file: src/wall.png */
+loadTexture('wall.png').then((data) => { /* inline-content 'wall.png' file: wall.png */
     wallTextureData = data;
 });
 
 let doorTextureData = null;
-loadTexture('door.png').then((data) => { /* inline-content 'door.png' file: src/door.png */
+loadTexture('door.png').then((data) => { /* inline-content 'door.png' file: door.png */
     doorTextureData = data;
 });
 
 let entranceTextureData = null;
-loadTexture('entrydoor.png').then((data) => { /* inline-content 'entrydoor.png' file: src/entrydoor.png */
+loadTexture('entrydoor.png').then((data) => { /* inline-content 'entrydoor.png' file: entrydoor.png */
     entranceTextureData = data;
 });
 
 let keyTextureData = null;
 let keyImage;
-loadTexture('key.png', true).then(({ data, image }) => { /* inline-content 'key.png' file: src/key.png */
+loadTexture('key.png', true).then(({ data, image }) => { /* inline-content 'key.png' file: key.png */
     keyImage = image;
     keyTextureData = data;
 });
 
 let coinTextureData = null;
 let coinImage;
-loadTexture('coin.png', true).then(({ data, image }) => { /* inline-content 'coin.png' file: src/coin.png */
+loadTexture('coin.png', true).then(({ data, image }) => { /* inline-content 'coin.png' file: coin.png */
     coinImage = image;
     coinTextureData = data;
 });

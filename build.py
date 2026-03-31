@@ -4,68 +4,88 @@ import base64, gzip
 import mimetypes
 import logging
 
+
 class ColorFilter(logging.Filter):
     def filter(self, record):
         colors = {
-            10: '\x1b[2m', # DEBUG
-            20: '\x1b[32m', # INFO
-            30: '\x1b[33m', # WARNING
-            40: '\x1b[31m', # ERROR
-            50: '\x1b[1;41m', # CRITICAL
+            10: "\x1b[2m",  # DEBUG
+            20: "\x1b[36m",  # INFO
+            30: "\x1b[33m",  # WARNING
+            40: "\x1b[31m",  # ERROR
+            50: "\x1b[1;41m",  # CRITICAL
         }
         brightcolors = {
-            10: '\x1b[90;1m', # DEBUG
-            20: '\x1b[92;1m', # INFO
-            30: '\x1b[93;1m', # WARNING
-            40: '\x1b[91;1m', # ERROR
-            50: '\x1b[91;1m', # CRITICAL
+            10: "\x1b[37;1m",  # DEBUG
+            20: "\x1b[96;1m",  # INFO
+            30: "\x1b[93;1m",  # WARNING
+            40: "\x1b[91;1m",  # ERROR
+            50: "\x1b[91;1m",  # CRITICAL
         }
-        record.color = colors.get(record.levelno, '')
-        record.brightcolor = brightcolors.get(record.levelno, '')
+        record.color = colors.get(record.levelno, "")
+        record.brightcolor = brightcolors.get(record.levelno, "")
         return True
 
-logging.basicConfig(format='\x1b[2m[\x1b[3m%(asctime)s\x1b[23m]\x1b[0m%(color)s %(brightcolor)s[%(levelname)s]\x1b[0m%(color)s %(message)s\x1b[0m', level=logging.WARNING, datefmt='%Y-%m-%d %H:%M:%S')
+logging.getLogger().addFilter(ColorFilter())
+logging.basicConfig(
+    format="\x1b[2m[\x1b[3m%(asctime)s\x1b[23m]\x1b[0m%(color)s %(brightcolor)s[%(levelname)s]\x1b[0m%(color)s %(message)s\x1b[0m",
+    level=logging.INFO,
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 def convert_to_data_uri(file_path):
     mime_type, _ = mimetypes.guess_type(file_path)
-    with open(file_path, 'rb') as f:
+    with open(file_path, "rb") as f:
         data = f.read()
-    encoded_data = base64.b64encode(data).decode('utf-8')
+    encoded_data = base64.b64encode(data).decode("utf-8")
     return f"data:{mime_type};base64,{encoded_data}"
+
 
 def convert_to_data_uri_string(file_content: str, mime_type: str):
-    encoded_data = base64.b64encode(file_content.encode('utf-8')).decode('utf-8')
+    encoded_data = base64.b64encode(file_content.encode("utf-8")).decode("utf-8")
     return f"data:{mime_type};base64,{encoded_data}"
 
+
 def replace_in_build(data: str):
-    html_comment_pattern = re.compile(r"<!-- replace-in-build (.*?)->(.*?) -->") 
+    html_comment_pattern = re.compile(r"<!-- replace-in-build (.*?)->(.*?) -->")
     generic_pattern = re.compile(r"\/\* replace-in-build (.*?)->(.*?) \*\/")
     remove_in_build_pattern = re.compile(r"\/\* remove-in-build \*\/")
     html_remove_in_build_pattern = re.compile(r"<!-- remove-in-build -->")
     while True:
         match = None
-        for pattern in [generic_pattern, html_comment_pattern, remove_in_build_pattern, html_remove_in_build_pattern]:
+        for pattern in [
+            generic_pattern,
+            html_comment_pattern,
+            remove_in_build_pattern,
+            html_remove_in_build_pattern,
+        ]:
             match = pattern.search(data)
             if match:
                 break
         if not match:
             break
-        line_start = data.rfind('\n', 0, match.start()) + 1
-        line_end = data.find('\n', match.end())
+        line_start = data.rfind("\n", 0, match.start()) + 1
+        line_end = data.find("\n", match.end())
         if line_end == -1:
             line_end = len(data)
         if "remove-in-build" in match.group(0):
             line = data[line_start:line_end]
-            print(f"\033[2;31mRemoving in build: '{line}'\033[0m")
-            data = data.replace(line, '')
+            logging.debug(f"Removing in build: '{line}'")
+            data = data.replace(line, "")
             continue
-        print(f"\033[2mReplacing in build: '{match.group(1)}' with '{match.group(2)}'\033[0m")
+        logging.debug(
+            f"Replacing in build: '{match.group(1)}' with '{match.group(2)}'"
+        )
         line = data[line_start:line_end]
-        data = data.replace(line, line.replace(match.group(0), '').replace(match.group(1), match.group(2)))
+        data = data.replace(
+            line,
+            line.replace(match.group(0), "").replace(match.group(1), match.group(2)),
+        )
     return data
-def inline_resources(data: str):
-    html_comment_pattern = re.compile(r"<!-- inline-content '(.*?)' file: (.*?) -->") 
+
+
+def inline_resources(data: str, base: str):
+    html_comment_pattern = re.compile(r"<!-- inline-content '(.*?)' file: (.*?) -->")
     generic_pattern = re.compile(r"\/\* inline-content '(.*?)' file: (.*?) \*\/")
     while True:
         match = None
@@ -76,37 +96,41 @@ def inline_resources(data: str):
         if not match:
             break
         # find the line containing the match
-        line_start = data.rfind('\n', 0, match.start()) + 1
-        line_end = data.find('\n', match.end())
+        line_start = data.rfind("\n", 0, match.start()) + 1
+        line_end = data.find("\n", match.end())
         if line_end == -1:
             line_end = len(data)
         line = data[line_start:line_end]
-        assert match.group(1) in line, f"Expected identifier '{match.group(1)}' not found in line: {line.strip()}"
-        file_path = match.group(2)
-        print(f"\033[2mProcessing inline content for file: {file_path}\033[0m")
+        assert (
+            match.group(1) in line
+        ), f"Expected identifier '{match.group(1)}' not found in line: {line.strip()}"
+        file_path = os.path.join(base, match.group(2))
+        logging.debug(f"Processing inline content for file: {file_path}")
         if os.path.exists(file_path):
-            if file_path.endswith(('.js', '.css', '.ts', '.html', '.json')):
-                with open(file_path, 'r', encoding='utf-8') as f:
+            if file_path.endswith((".js", ".css", ".ts", ".html", ".json")):
+                with open(file_path, "r", encoding="utf-8") as f:
                     file_content = f.read()
                 file_content = replace_in_build(file_content)
-                file_content = inline_resources(file_content)
-                print(f"\033[32mInlined {file_path} with content length {len(file_content)}\033[0m")
+                file_content = inline_resources(file_content, base)
+                logging.debug(f"Inlined {file_path} with content length {len(file_content)}")
                 mime_type, _ = mimetypes.guess_type(file_path)
                 data_uri = convert_to_data_uri_string(file_content, mime_type)
             else:
-                print(f"\033[33mWarning: Inlining binary file {file_path} as data URI\033[0m")
+                logging.debug(f"Inlining binary file {file_path} as data URI")
                 data_uri = convert_to_data_uri(file_path)
-            data = data.replace(line, line.replace(match.group(0), '').replace(match.group(1), data_uri))
+            data = data.replace(
+                line, line.replace(match.group(0), "").replace(match.group(1), data_uri)
+            )
         else:
-            print(f"\033[31mFile not found: {file_path}\033[0m")
+            logging.error(f"File not found: {file_path}")
             break
     return data
 
 
 def convert_html_to_page(file_path):
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
-    soup = bs4.BeautifulSoup(content, 'html.parser')
+    soup = bs4.BeautifulSoup(content, "html.parser")
     # extract important head elements
     head = soup.head
     important_head = []
@@ -118,33 +142,51 @@ def convert_html_to_page(file_path):
                 important_head[-1] += f" {comment_str}"
             else:
                 important_head.append(comment_str)
-        elif isinstance(element, bs4.element.Tag) and element.name in ['meta', 'link', 'style']:
+        elif isinstance(element, bs4.element.Tag) and element.name in [
+            "meta",
+            "link",
+            "style",
+        ]:
             important_head.append(str(element))
         elif isinstance(element, bs4.element.NavigableString):
             text = str(element).strip()
             if text:
                 important_head.append(text)
-    important_head = '\n'.join(important_head)
+    important_head = "\n".join(important_head)
     body = soup.body
     return str(body), important_head
 
-def combine_pages(title: str, menu: str, menu_head: str, game: str, game_head: str, *, compress=True, no_js_msg="Please enable JavaScript to view the content."):
-    if compress:
-        print(f"\033[36;1mCompressing menu content...\033[0m")
-        menu = base64.b64encode(gzip.compress(menu.encode('utf-8'))).decode('utf-8')
-        print(f"\033[36;1mCompressing menu head...\033[0m")
-        menu_head = base64.b64encode(gzip.compress(menu_head.encode('utf-8'))).decode('utf-8')
-        print(f"\033[36;1mCompressing game content...\033[0m")
-        game = base64.b64encode(gzip.compress(game.encode('utf-8'))).decode('utf-8')
-        print(f"\033[36;1mCompressing game head...\033[0m")
-        game_head = base64.b64encode(gzip.compress(game_head.encode('utf-8'))).decode('utf-8')
+
+def combine_pages(
+    title: str,
+    menu: str,
+    menu_head: str,
+    game: str,
+    game_head: str,
+    *,
+    compression_enabled=True
+):
+    if compression_enabled:
+        logging.info("Compressing menu content...")
+        menu = base64.b64encode(gzip.compress(menu.encode("utf-8"))).decode("utf-8")
+        logging.info("Compressing menu head...")
+        menu_head = base64.b64encode(gzip.compress(menu_head.encode("utf-8"))).decode(
+            "utf-8"
+        )
+        logging.info("Compressing game content...")
+        game = base64.b64encode(gzip.compress(game.encode("utf-8"))).decode("utf-8")
+        logging.info("Compressing game head...")
+        game_head = base64.b64encode(gzip.compress(game_head.encode("utf-8"))).decode(
+            "utf-8"
+        )
     else:
-        print(f"\033[33mSkipping compression as per options\033[0m")
-        menu = base64.b64encode(menu.encode('utf-8')).decode('utf-8')
-        menu_head = base64.b64encode(menu_head.encode('utf-8')).decode('utf-8')
-        game = base64.b64encode(game.encode('utf-8')).decode('utf-8')
-        game_head = base64.b64encode(game_head.encode('utf-8')).decode('utf-8')
-    NAVIGATION_SCRIPT = """
+        logging.warning("Skipping compression as per options")
+        menu = base64.b64encode(menu.encode("utf-8")).decode("utf-8")
+        menu_head = base64.b64encode(menu_head.encode("utf-8")).decode("utf-8")
+        game = base64.b64encode(game.encode("utf-8")).decode("utf-8")
+        game_head = base64.b64encode(game_head.encode("utf-8")).decode("utf-8")
+    NAVIGATION_SCRIPT = (
+        """
     <script>
         const documents = {
             '/index.html': ["{menu}", "{menu_head}"],
@@ -237,7 +279,14 @@ def combine_pages(title: str, menu: str, menu_head: str, game: str, game_head: s
             document.body.appendChild(loaderBg);
         });
     </script>
-    """.replace('{menu}', menu).replace('{menu_head}', menu_head).replace('{game}', game).replace('{game_head}', game_head).replace('{compression_enabled}', 'true' if compress else 'false')
+    """.replace(
+            "{menu}", menu
+        )
+        .replace("{menu_head}", menu_head)
+        .replace("{game}", game)
+        .replace("{game_head}", game_head)
+        .replace("{compression_enabled}", "true" if compression_enabled else "false")
+    )
     document = f"""<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -248,37 +297,77 @@ def combine_pages(title: str, menu: str, menu_head: str, game: str, game_head: s
         <div id="head-content"></div>
     </head>
     <body style="background-color:black;color:white;">
-        <noscript>{no_js_msg}</noscript>
+        <noscript><p style="color:#e66;background-color:#300;padding:10px;margin-inline:10px;border-radius:10px;border:1px solid #e654;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" style="width:20px;height:20px;vertical-align:-5px;margin-inline-end:6px;">
+  <path fill-rule="evenodd" d="M6.701 2.25c.577-1 2.02-1 2.598 0l5.196 9a1.5 1.5 0 0 1-1.299 2.25H2.804a1.5 1.5 0 0 1-1.3-2.25l5.197-9ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 1 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" />
+</svg>Please enable JavaScript to view the content.</p></noscript>
         <div id="content"></div>
     </body>
     </html>"""
-
     return document
+
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description='Build the game into a single HTML file')
-    parser.add_argument('--output', '-o', default='dist/index.html', help='Output file path')
-    parser.add_argument('--title', default='2.5d Maze Runner', help='Title of the generated HTML page')
-    parser.add_argument('--no-compress', action='store_true', help='Disable gzip compression for embedded content (results in larger file size but faster loading)')
+
+    parser = argparse.ArgumentParser(
+        description="Build the game into a single HTML file"
+    )
+    parser.add_argument(
+        "--output", "-o", default="dist/index.html", help="Output file path"
+    )
+    parser.add_argument(
+        "--title", default="2.5d Maze Runner", help="Title of the generated HTML page"
+    )
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Enable verbose debug output"
+    )
+    parser.add_argument(
+        "--src", "-s", default="src", help="Source directory containing HTML files"
+    )
+    parser.add_argument(
+        "--inline-base", help="Base path to inline resources from (default: src or the value of --src)"
+    )
+    parser.add_argument(
+        "--no-compress",
+        action="store_true",
+        help="Disable gzip compression for embedded content (results in larger file size but faster loading)",
+    )
     args = parser.parse_args()
     if os.path.exists(args.output):
-        print(f"\033[33mWarning: Output file {args.output} already exists and will be overwritten.\033[0m")
-    menu_content, menu_head = convert_html_to_page('src/index.html')
-    game_content, game_head = convert_html_to_page('src/game.html')
-    print(f"\033[96mBuilding menu content\033[0m")
-    menu_content = inline_resources(replace_in_build(menu_content))
-    print(f"\033[96mBuilding menu head\033[0m")
-    menu_head = inline_resources(replace_in_build(menu_head))
-    print(f"\033[96mBuilding game content\033[0m")
-    game_content = inline_resources(replace_in_build(game_content))
-    print(f"\033[96mBuilding game head\033[0m")
-    game_head = inline_resources(replace_in_build(game_head))
-    combined = combine_pages(args.title, menu_content, menu_head, game_content, game_head, compress=not args.no_compress)
+        logging.warning(
+            f"Output file {args.output} already exists and will be overwritten."
+        )
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    if not args.inline_base:
+        args.inline_base = args.src
+
+    menu_content, menu_head = convert_html_to_page(os.path.join(args.src, "index.html"))
+    game_content, game_head = convert_html_to_page(os.path.join(args.src, "game.html"))
+    logging.info("Building menu content...")
+    menu_content = inline_resources(replace_in_build(menu_content), args.inline_base)
+    logging.info("Building menu head...")
+    menu_head = inline_resources(replace_in_build(menu_head), args.inline_base)
+    logging.info("Building game content...")
+    game_content = inline_resources(replace_in_build(game_content), args.inline_base)
+    logging.info("Building game head...")
+    game_head = inline_resources(replace_in_build(game_head), args.inline_base)
+    combined = combine_pages(
+        args.title,
+        menu_content,
+        menu_head,
+        game_content,
+        game_head,
+        compression_enabled=not args.no_compress,
+    )
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
-    print(f"\033[34;1mWriting combined content to {args.output}\033[0m")
-    with open(args.output, 'w', encoding='utf-8') as f:
+    logging.info(f"Writing combined content to {args.output}")
+    with open(args.output, "w", encoding="utf-8") as f:
         f.write(combined)
+    print(f"\033[92mSuccessfully built {args.output}\033[0m")
+
 
 if __name__ == "__main__":
     main()

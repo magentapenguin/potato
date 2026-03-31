@@ -1,4 +1,4 @@
-import { currentSaveIndex } from "./currentSave.js"; /* inline-content './currentSave.js' file: src/currentSave.js */
+import { currentSaveIndex } from "./currentSave.js"; /* inline-content './currentSave.js' file: currentSave.js */
 
 const saveList = document.getElementById('save-list');
 
