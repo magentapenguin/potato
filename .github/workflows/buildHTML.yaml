@@ -22,11 +22,11 @@ jobs:
               run: |
                   python build.py
             - name: Upload built files to latest release
-              uses: softprops/action-gh-release@v1
-              with:
-                  files: dist/index.html
+              run: |
+                LATEST_TAG=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
+                gh release upload "$LATEST_TAG" dist/index.html
               env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
            
             

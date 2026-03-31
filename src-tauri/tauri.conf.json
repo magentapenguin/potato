@@ -6,7 +6,7 @@
   "build": {
     "frontendDist": "../src",
     "devUrl": "http://localhost:8000",
-    "beforeDevCommand": "cd .. && npm run dev"
+    "beforeDevCommand": "npm run dev"
   },
   "plugins": {
     "updater": {
