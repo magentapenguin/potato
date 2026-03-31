@@ -72,6 +72,8 @@ async function checkForUpdates() {
         } else {
             throw new Error('Failed to parse updated content: documents variable not found');
         }
+    } else {
+        throw new Error('Failed to parse updated content: documents variable not found');
     }
 }
 async function installUpdate(reload = true) {
@@ -210,32 +212,35 @@ class UpdateNotification extends HTMLElement {
                 position: fixed;
                 bottom: 20px;
                 left: 50%;
+                width: max-content;
                 transform: translateX(-50%);
-                background-color: #333;
+                background-color: #111;
+                border: 1px #222 solid;
                 color: #eee;
-                padding: 15px 25px;
-                border-radius: 5px;
+                padding: 10px;
+                border-radius: 10px;
                 box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
                 display: flex;
                 align-items: center;
-                gap: 15px;
-                font: 16px sans-serif;
+                flex-direction: column;
+                gap: 5px;
+                font: 18px sans-serif;
                 z-index: 10000;
             }
             .update-notification button {
-                background-color: #48f;
-                border: none;
-                color: white;
-                padding: 10px 20px;
-                text-align: center;
-                text-decoration: none;
                 display: inline-block;
-                font: inherit;
-                border-radius: 3px;
+                padding: 5px 10px;
+                background-color: #0a635444;
+                border: none;
+                color: #5fa;
+                border-radius: 5px;
                 cursor: pointer;
+                font: inherit;
+                font-size: 16px;
+                width: 100%;
             }
             .update-notification button:hover {
-                background-color: #57f;
+                background-color: #0b7e7066;
             }
         `;
         this.shadowRoot.appendChild(style);
