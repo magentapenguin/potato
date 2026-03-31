@@ -219,6 +219,7 @@ class UpdateNotification extends HTMLElement {
                 display: flex;
                 align-items: center;
                 gap: 15px;
+                font: 16px sans-serif;
                 z-index: 10000;
             }
             .update-notification button {
@@ -229,7 +230,7 @@ class UpdateNotification extends HTMLElement {
                 text-align: center;
                 text-decoration: none;
                 display: inline-block;
-                font-size: 16px;
+                font: inherit;
                 border-radius: 3px;
                 cursor: pointer;
             }
