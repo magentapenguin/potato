@@ -209,17 +209,24 @@ def combine_pages(
             });
         }
         const COMPRESSION_ENABLED = {compression_enabled};
-        async function decompressAndDecode(data) {
-            const compressedData = Uint8Array.fromBase64(data)
+        async function decompressAndDecode(data, onProgress) {
+            const compressedData = Uint8Array.fromBase64(data);
             if (!COMPRESSION_ENABLED) {
-                const decoder = new TextDecoder();
-                return decoder.decode(compressedData);
+                return new TextDecoder().decode(compressedData);
             }
+            const total = compressedData.length;
+            let loaded = 0;
+            const counter = new TransformStream({
+                transform(chunk, controller) {
+                    loaded += chunk.byteLength;
+                    onProgress?.(loaded / total);
+                    controller.enqueue(chunk);
+                }
+            });
             const blob = new Blob([compressedData], { type: 'application/gzip' });
             const ds = new DecompressionStream("gzip");
-            const decompressedStream = blob.stream().pipeThrough(ds);
-            const decompressedBlob = await new Response(decompressedStream).blob();
-            return await decompressedBlob.text();
+            const decompressedStream = blob.stream().pipeThrough(counter).pipeThrough(ds);
+            return await new Response(decompressedStream).text();
         }
         function onHashChange() {
             loader.style.display = 'block';
@@ -239,14 +246,44 @@ def combine_pages(
                 loaderBg.style.display = 'none';
                 return;
             }
-            const loading = [decompressAndDecode(head).then(decompressedHead => {
-                document.getElementById('head-content').innerHTML = decompressedHead;
-                executeScripts(document.getElementById('head-content'));
-            }),
-            decompressAndDecode(content).then(decompressedContent => {
-                document.getElementById('content').innerHTML = decompressedContent;
-                executeScripts(document.getElementById('content'));
-            })];
+            let progress = 0;
+            let headProgress = 0;
+            let contentProgress = 0;
+            const loading = [
+                decompressAndDecode(head, progress => {
+                    headProgress = progress;
+                }).then(decompressedHead => {
+                    document.getElementById('head-content').innerHTML = decompressedHead;
+                    executeScripts(document.getElementById('head-content'));
+                }),
+                decompressAndDecode(content, progress => {
+                    contentProgress = progress;
+                }).then(decompressedContent => {
+                    document.getElementById('content').innerHTML = decompressedContent;
+                    executeScripts(document.getElementById('content'));
+                }),
+                new Promise(resolve => {
+                    const observer = new PerformanceObserver((list) => {
+                        list.getEntries().forEach((entry) => {
+                            if (entry.name === 'first-contentful-paint') {
+                                resolve();
+                                observer.disconnect();
+                            }
+                        });
+                    });
+                    observer.observe({ type: "paint", buffered: true });
+                }),
+                new Promise(resolve => {
+                    const interval = setInterval(() => {
+                        const overallProgress = (headProgress + contentProgress) / 2;
+                        loader.textContent = `Loading... ${Math.floor(overallProgress * 100)}%`;
+                        if (overallProgress >= 1) {
+                            clearInterval(interval);
+                            resolve();
+                        }
+                    }, 100);
+                }),
+            ];
             Promise.all(loading).then(() => {
                 console.log(`Loaded content for ${hash || '/index.html'}`);
                 loader.style.display = 'none';

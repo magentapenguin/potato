@@ -21,10 +21,12 @@ jobs:
             - name: Run build script
               run: |
                   python build.py
-            - name: Upload built files
-              uses: actions/upload-artifact@v7
+            - name: Upload built files to latest release
+              uses: softprops/action-gh-release@v1
               with:
-                  name: built-game
-                  path: dist/maze_runner.html
-            
+                  files: dist/index.html
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+           
             
