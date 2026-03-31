@@ -77,6 +77,14 @@ setInterval(() => {
 }, 5000);
 bc.postMessage('tabs_open');
 
+
+if (updateManager) {
+    updateManager.on('update-available', () => {
+        updateManager.showUpdateNotification();
+    });
+    updateManager.checkForUpdates();
+}
+
 function updateSaveList(updateOtherTabs = true) {
     if (updateOtherTabs) bc.postMessage('update_saves');
     saveList.innerHTML = '';

@@ -3,7 +3,7 @@ import os, bs4, re
 import base64, gzip
 import mimetypes
 import logging
-import time
+import time, datetime
 
 
 class ColorFilter(logging.Filter):
@@ -25,6 +25,7 @@ class ColorFilter(logging.Filter):
         record.color = colors.get(record.levelno, "")
         record.brightcolor = brightcolors.get(record.levelno, "")
         return True
+
 
 logging.getLogger().addFilter(ColorFilter())
 logging.basicConfig(
@@ -74,9 +75,7 @@ def replace_in_build(data: str):
             logging.debug(f"Removing in build: '{line}'")
             data = data.replace(line, "")
             continue
-        logging.debug(
-            f"Replacing in build: '{match.group(1)}' with '{match.group(2)}'"
-        )
+        logging.debug(f"Replacing in build: '{match.group(1)}' with '{match.group(2)}'")
         line = data[line_start:line_end]
         data = data.replace(
             line,
@@ -113,7 +112,9 @@ def inline_resources(data: str, base: str):
                     file_content = f.read()
                 file_content = replace_in_build(file_content)
                 file_content = inline_resources(file_content, base)
-                logging.debug(f"Inlined {file_path} with content length {len(file_content)}")
+                logging.debug(
+                    f"Inlined {file_path} with content length {len(file_content)}"
+                )
                 mime_type, _ = mimetypes.guess_type(file_path)
                 data_uri = convert_to_data_uri_string(file_content, mime_type)
             else:
@@ -165,7 +166,8 @@ def combine_pages(
     game: str,
     game_head: str,
     *,
-    compression_enabled=True
+    compression_enabled=True,
+    script_path="src/nav.js",
 ):
     if compression_enabled:
         logging.info("Compressing menu content...")
@@ -186,183 +188,22 @@ def combine_pages(
         menu_head = base64.b64encode(menu_head.encode("utf-8")).decode("utf-8")
         game = base64.b64encode(game.encode("utf-8")).decode("utf-8")
         game_head = base64.b64encode(game_head.encode("utf-8")).decode("utf-8")
+    with open(script_path, "r", encoding="utf-8") as f:
+        script = f.read()
     NAVIGATION_SCRIPT = (
-        """
-    <script>
-        let documents = {
-            '/index.html': ["{menu}", "{menu_head}"],
-            '/game.html': ["{game}", "{game_head}"]
-        };
-        const COMPRESSION_ENABLED = {compression_enabled};
-        if (!COMPRESSION_ENABLED) {
-            console.warn('No compression, will not auto-update');
-        }
-        function executeScripts(container) {
-            const scripts = container.querySelectorAll('script');
-            scripts.forEach(oldScript => {
-                const newScript = document.createElement('script');
-                // Copy all attributes
-                for (const attr of oldScript.attributes) {
-                    newScript.setAttribute(attr.name, attr.value);
-                }
-                if (oldScript.src) {
-                    newScript.src = oldScript.src;
-                } else {
-                    newScript.textContent = oldScript.textContent;
-                }
-                oldScript.parentNode.replaceChild(newScript, oldScript);
-            });
-        }
-        async function checkForUpdates() {
-            if (!COMPRESSION_ENABLED) return;
-            try {
-                const response = await fetch("{AUTO_UPDATE_URL}");
-                if (!response.ok) {
-                    throw new Error(`Failed to check for updates: ${response.status} ${response.statusText}`);
-                }
-                const data = await response.json();
-                const assets = data["assets"] ?? [];
-                const indexAsset = assets.find(asset => asset.name === "index.html")["url"];
-                const indexResponse = await fetch(indexAsset, {
-                    headers: {
-                        "Accept": "application/octet-stream"
-                    },
-                    // Allow redirects in case the asset URL is a redirect (e.g. GitHub's CDN)
-                    redirect: "follow",
-                    cors: "cors"
-                });
-                if (!indexResponse.ok) {
-                    throw new Error(`Failed to download update: ${indexResponse.status} ${indexResponse.statusText}`);
-                }
-                const updatedContent = await indexResponse.text();
-                // const match = /&lt;script>\\s*(let|const) documents = {\\s*'\\/index\\.html':\\s*\\["(.*?)", "(.*?)"\\],\\s*'\\/game\\.html':\\s*\\["(.*?)", "(.*?)"\\]/gm.exec(updatedContent);
-                if (match) {
-                    const [_, __, newMenu, newMenuHead, newGame, newGameHead] = match;
-                    documents['/index.html'] = [newMenu, newMenuHead];
-                    documents['/game.html'] = [newGame, newGameHead];
-                    console.log('Content updated from latest release');
-                } else {
-                    throw new Error('Failed to parse updated content');
-                }
-            } catch (err) {
-                console.error('Error checking for updates:', err);
-            }
-        }
-        async function decompressAndDecode(data, onProgress) {
-            const compressedData = Uint8Array.fromBase64(data);
-            if (!COMPRESSION_ENABLED) {
-                return new TextDecoder().decode(compressedData);
-            }
-            const total = compressedData.length;
-            let loaded = 0;
-            const counter = new TransformStream({
-                transform(chunk, controller) {
-                    loaded += chunk.byteLength;
-                    onProgress?.(loaded / total);
-                    controller.enqueue(chunk);
-                }
-            });
-            const blob = new Blob([compressedData], { type: 'application/gzip' });
-            const ds = new DecompressionStream("gzip");
-            const decompressedStream = blob.stream().pipeThrough(counter).pipeThrough(ds);
-            return await new Response(decompressedStream).text();
-        }
-        function onHashChange() {
-            loader.style.display = 'block';
-            loader.textContent = 'Loading...';
-            loaderBg.style.display = 'block';
-            const hash = window.location.hash.substring(1);
-            if (!hash) {
-                window.location.hash = '/index.html';
-                return;
-            }
-            const [content, head] = documents[hash] ?? [null, null];
-            if (!content || !head) {
-                console.error(`No content found for hash: ${hash}`);
-                document.getElementById('content').innerHTML = '<h1>404 Not Found</h1><p>The requested page could not be found.</p><a href="#/index.html" style="color:#48f">Go back to menu</a>';
-                document.getElementById('head-content').innerHTML = '';
-                loader.style.display = 'none';
-                loaderBg.style.display = 'none';
-                return;
-            }
-            let progress = 0;
-            let headProgress = 0;
-            let contentProgress = 0;
-            const loading = [
-                decompressAndDecode(head, progress => {
-                    headProgress = progress;
-                }).then(decompressedHead => {
-                    document.getElementById('head-content').innerHTML = decompressedHead;
-                    executeScripts(document.getElementById('head-content'));
-                }),
-                decompressAndDecode(content, progress => {
-                    contentProgress = progress;
-                }).then(decompressedContent => {
-                    document.getElementById('content').innerHTML = decompressedContent;
-                    executeScripts(document.getElementById('content'));
-                }),
-                new Promise(resolve => {
-                    const observer = new PerformanceObserver((list) => {
-                        list.getEntries().forEach((entry) => {
-                            if (entry.name === 'first-contentful-paint') {
-                                resolve();
-                                observer.disconnect();
-                            }
-                        });
-                    });
-                    observer.observe({ type: "paint", buffered: true });
-                }),
-                new Promise(resolve => {
-                    const interval = setInterval(() => {
-                        const overallProgress = (headProgress + contentProgress) / 2;
-                        loader.textContent = `Loading... ${Math.floor(overallProgress * 100)}%`;
-                        if (overallProgress >= 1) {
-                            clearInterval(interval);
-                            resolve();
-                        }
-                    }, 100);
-                }),
-            ];
-            Promise.all(loading).then(() => {
-                console.log(`Loaded content for ${hash || '/index.html'}`);
-                loader.style.display = 'none';
-                loaderBg.style.display = 'none';
-            }).catch((err) => {
-                console.error('Error loading content:', err);
-                alert('An error occurred while loading the page. Please try refreshing or check the console for details.');
-            });
-        }
-        window.addEventListener('hashchange', location.reload.bind(location));
-        window.addEventListener('load', onHashChange);
-        const loader = document.createElement('div');
-        const loaderBg = document.createElement('div');
-        loaderBg.style.position = 'fixed';
-        loaderBg.style.inset = '0';
-        loaderBg.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-        loaderBg.style.zIndex = '9998';
-        loaderBg.style.backdropFilter = 'blur(5px)';
-        loader.style.position = 'fixed';
-        loader.style.top = '50%';
-        loader.style.left = '50%';
-        loader.style.transform = 'translate(-50%, -50%)';
-        loader.style.fontSize = '24px';
-        loader.textContent = 'Loading...';
-        loader.style.color = '#eee';
-        loader.style.zIndex = '9999';
-        loader.style.padding = '20px';
-        document.addEventListener('DOMContentLoaded', () => {
-            document.body.appendChild(loader);
-            document.body.appendChild(loaderBg);
-        });
-    </script>
-    """.replace(
+        script
+        .replace(
             "{menu}", menu
         )
         .replace("{menu_head}", menu_head)
         .replace("{game}", game)
         .replace("{game_head}", game_head)
-        .replace("{compression_enabled}", "true" if compression_enabled else "false")
-        .replace("{AUTO_UPDATE_URL}", "https://api.github.com/repos/magentapenguin/potato/releases/latest")
+        .replace("false//{compression_enabled}", "true" if compression_enabled else "false")
+        .replace(
+            "{AUTO_UPDATE_URL}",
+            "https://raw.githubusercontent.com/magentapenguin/potato/refs/heads/dist/dist/index.html",
+        )
+        .replace("{build_time}", datetime.datetime.now().isoformat())
     )
     document = f"""<!DOCTYPE html>
     <html lang="en">
@@ -370,7 +211,7 @@ def combine_pages(
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{title}</title>
-        {NAVIGATION_SCRIPT}
+        <script>{NAVIGATION_SCRIPT}</script>
         <div id="head-content"></div>
     </head>
     <body style="background-color:black;color:white;">
@@ -403,10 +244,14 @@ def main():
         "--verbose", "-v", action="store_true", help="Enable verbose debug output"
     )
     parser.add_argument(
-        "--src", "-s", default="src", help="Source directory containing HTML files"
+        "--src", "-s", default="src", help="Source directory containing HTML files and navigation script"
     )
     parser.add_argument(
-        "--inline-base", help="Base path to inline resources from (default: src or the value of --src)"
+        "--nav-script", "--nav", default="nav.js", help="Path to the navigation script to embed"
+    )
+    parser.add_argument(
+        "--inline-base",
+        help="Base path to inline resources from (default: src or the value of --src)",
     )
     parser.add_argument(
         "--no-compress",
@@ -441,11 +286,13 @@ def main():
         game_content,
         game_head,
         compression_enabled=not args.no_compress,
+        script_path=os.path.join(args.src, args.nav_script)
     )
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
     logging.info(f"Writing combined content to {args.output}")
     with open(args.output, "w", encoding="utf-8") as f:
         f.write(combined)
+
     def format_time(seconds):
         if seconds < 60:
             return f"{seconds:.2f} seconds"
@@ -453,7 +300,10 @@ def main():
             return f"{seconds/60:.2f} minutes"
         else:
             return f"{seconds/3600:.2f} hours"
-    print(f"\033[92mSuccessfully built {args.output} in \033[1m{format_time(time.time()-start)}\033[0m")
+
+    print(
+        f"\033[92mSuccessfully built {args.output} in \033[1m{format_time(time.time()-start)}\033[0m"
+    )
 
 
 if __name__ == "__main__":

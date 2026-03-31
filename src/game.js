@@ -61,6 +61,13 @@ bc.addEventListener("message", (event) => {
     }
 });
 
+if (updateManager) {
+    updateManager.on('update-available', () => {
+        updateManager.showUpdateNotification();
+    });
+    updateManager.checkForUpdates();
+}
+
 let currentMusic = null;
 
 document.getElementById('mouse-sensitivity').addEventListener('input', (e) => {
@@ -131,7 +138,7 @@ loadSound('key.wav').then((audio) => { /* inline-content 'key.wav' file: key.wav
 });
 
 
-let footstepSounds = []; 
+let footstepSounds = [];
 Promise.all([loadSound('footstep1.wav'), loadSound('footstep2.wav'), loadSound('footstep3.wav')]).then((sounds) => {/* inline-content 'footstep1.wav' file: footstep1.wav */ /* inline-content 'footstep2.wav' file: footstep2.wav */ /* inline-content 'footstep3.wav' file: footstep3.wav */
     footstepSounds = sounds;
 });
@@ -281,7 +288,7 @@ function exportSave() {
 }
 
 function exportSettings() {
-    const blob = new Blob([JSON.stringify({settings})], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ settings })], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1303,7 +1310,7 @@ function update(deltaTime) {
             removeSpriteAt(key.x, key.y);
             level[key.y][key.x] = ' ';
             player.inventory.key++;
-            console.log('Key collected! Total:', player.inventory.key); /* remove-in-build */ 
+            console.log('Key collected! Total:', player.inventory.key); /* remove-in-build */
             if (keySound) {
                 keySound.currentTime = 0;
                 keySound.play();

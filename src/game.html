@@ -34,7 +34,8 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            flex: 0 1 auto; /* Allow to shrink but not grow, so it doesn't take up all space and push the leave button down */
+            flex: 0 1 auto;
+            /* Allow to shrink but not grow, so it doesn't take up all space and push the leave button down */
             width: 100%;
         }
 
@@ -96,28 +97,31 @@
 </head>
 
 <body>
-    <noscript><p style="color:#e66;background-color:#300;padding:10px;margin-inline:10px;border-radius:10px;border:1px solid #e654;z-index: 10000;">
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" style="width:20px;height:20px;vertical-align:-5px;margin-inline-end:6px;">
-  <path fill-rule="evenodd" d="M6.701 2.25c.577-1 2.02-1 2.598 0l5.196 9a1.5 1.5 0 0 1-1.299 2.25H2.804a1.5 1.5 0 0 1-1.3-2.25l5.197-9ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 1 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" />
-</svg>Please enable JavaScript to view the content.</p></noscript>
+    <noscript>
+        <p
+            style="color:#e66;background-color:#300;padding:10px;margin-inline:10px;border-radius:10px;border:1px solid #e654;z-index: 10000;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
+                style="width:20px;height:20px;vertical-align:-5px;margin-inline-end:6px;">
+                <path fill-rule="evenodd"
+                    d="M6.701 2.25c.577-1 2.02-1 2.598 0l5.196 9a1.5 1.5 0 0 1-1.299 2.25H2.804a1.5 1.5 0 0 1-1.3-2.25l5.197-9ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 1 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
+                    clip-rule="evenodd" />
+            </svg>Please enable JavaScript to view the content.
+        </p>
+    </noscript>
     <div id="loading"
         style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; color: white;">
         Loading...
     </div>
-    <button
-        id="settings"
-        onclick="document.getElementById('settings-menu').showModal()"
-        style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: white; cursor: pointer;"
-        >
+    <button id="settings" onclick="document.getElementById('settings-menu').showModal()"
+        style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: white; cursor: pointer;">
         <span class="sr-only">Settings</span>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-            <path d="M18.75 12.75h1.5a.75.75 0 0 0 0-1.5h-1.5a.75.75 0 0 0 0 1.5ZM12 6a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 12 6ZM12 18a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 12 18ZM3.75 6.75h1.5a.75.75 0 1 0 0-1.5h-1.5a.75.75 0 0 0 0 1.5ZM5.25 18.75h-1.5a.75.75 0 0 1 0-1.5h1.5a.75.75 0 0 1 0 1.5ZM3 12a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 3 12ZM9 3.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM12.75 12a2.25 2.25 0 1 1 4.5 0 2.25 2.25 0 0 1-4.5 0ZM9 15.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" />
-        </svg>          
+            <path
+                d="M18.75 12.75h1.5a.75.75 0 0 0 0-1.5h-1.5a.75.75 0 0 0 0 1.5ZM12 6a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 12 6ZM12 18a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 12 18ZM3.75 6.75h1.5a.75.75 0 1 0 0-1.5h-1.5a.75.75 0 0 0 0 1.5ZM5.25 18.75h-1.5a.75.75 0 0 1 0-1.5h1.5a.75.75 0 0 1 0 1.5ZM3 12a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 3 12ZM9 3.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM12.75 12a2.25 2.25 0 1 1 4.5 0 2.25 2.25 0 0 1-4.5 0ZM9 15.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" />
+        </svg>
     </button>
-    <dialog
-        id="settings-menu"
-        style="background-color: #1a1b22; border: 1px #2c2d35 solid; color: white; padding: 20px; border-radius: 5px; display: flex; flex-direction: column; gap: 10px;"
-        >
+    <dialog id="settings-menu"
+        style="background-color: #1a1b22; border: 1px #2c2d35 solid; color: white; padding: 20px; border-radius: 5px; display: flex; flex-direction: column; gap: 10px;">
         <label>
             <span>Music</span>
             <select id="music-type">
@@ -152,8 +156,7 @@
         <button class="button" id="import-settings">
             Import Settings
         </button>
-        <button id="close-settings" class="button"
-        onclick="document.getElementById('settings-menu').close()">
+        <button id="close-settings" class="button" onclick="document.getElementById('settings-menu').close()">
             Close
         </button>
     </dialog>
@@ -167,7 +170,8 @@
         </div>
     </dialog>
     <canvas id="canvas" width="720" height="480" style="width: auto;"></canvas>
-    <a class="button" href="index.html" style="text-decoration: none;"> <!-- replace-in-build index.html->#/index.html -->
+    <a class="button" href="index.html" style="text-decoration: none;">
+        <!-- replace-in-build index.html->#/index.html -->
         Menu
     </a>
     <script src="game.js" type="module"></script> <!-- inline-content 'game.js' file: game.js -->
