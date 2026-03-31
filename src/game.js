@@ -39,6 +39,28 @@ const settings = {
     footstepVolume: 1,
 };
 
+let noSave = false;
+
+// send a message to other tabs to check that no other games are open, which would cause save conflicts. If we receive a message back, it means another tab is open and we should redirect to the menu to avoid conflicts
+const bc = new BroadcastChannel('maze_channel');
+bc.postMessage({ type: 'check_tabs' });
+setInterval(() => {
+    bc.postMessage('check_tabs');
+}, 5000);
+bc.addEventListener("message", (event) => {
+    console.log('Received message from other tab:', event.data); /* remove-in-build */
+    if (event.data.type === 'check_tabs') {
+        bc.postMessage({ type: 'tabs_open' });
+    } else if (event.data.type === 'tabs_open') {
+        if (confirm('Another tab with the game is open, which can cause save conflicts. Do you want to go back to the menu to avoid this?')) {
+            location.assign(location.pathname.replace('game.html', '')); /* replace-in-build location.assign(location.pathname.replace('game.html', ''))->location.hash = '/index.html' */
+        }
+    } else if (event.data.type === 'update_saves') {
+        noSave = true;
+        location.reload();
+    }
+});
+
 let currentMusic = null;
 
 document.getElementById('mouse-sensitivity').addEventListener('input', (e) => {
@@ -184,7 +206,7 @@ loadData()
 loadSettings();
 
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden && !localStorage.getItem('clear')) {
+    if (document.hidden && !localStorage.getItem('clear') && !noSave) {
         saveData();
         saveSettings();
     }

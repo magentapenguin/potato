@@ -66,7 +66,19 @@ if ("launchQueue" in window) {
     });
 }
 
-function updateSaveList() {
+const bc = new BroadcastChannel('maze_channel');
+bc.addEventListener('message', (event) => {
+    if (event.data === 'update_saves') {
+        updateSaveList(false);
+    }
+});
+setInterval(() => {
+    bc.postMessage('tabs_open');
+}, 5000);
+bc.postMessage('tabs_open');
+
+function updateSaveList(updateOtherTabs = true) {
+    if (updateOtherTabs) bc.postMessage('update_saves');
     saveList.innerHTML = '';
     const saves = JSON.parse(localStorage.getItem('saves') ?? '[]');
     saves.forEach((save, index) => {

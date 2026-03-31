@@ -3,6 +3,7 @@ import os, bs4, re
 import base64, gzip
 import mimetypes
 import logging
+import time
 
 
 class ColorFilter(logging.Filter):
@@ -339,6 +340,9 @@ def combine_pages(
   <path fill-rule="evenodd" d="M6.701 2.25c.577-1 2.02-1 2.598 0l5.196 9a1.5 1.5 0 0 1-1.299 2.25H2.804a1.5 1.5 0 0 1-1.3-2.25l5.197-9ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 1 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" />
 </svg>Please enable JavaScript to view the content.</p></noscript>
         <div id="content"></div>
+        <div style="position:fixed;bottom:10px;right:10px;font-size:12px;color:#666;">
+            See the <a href="https://github.com/magentapenguin/potato" style="color:#48f">source code</a>
+        </div>
     </body>
     </html>"""
     return document
@@ -380,7 +384,7 @@ def main():
 
     if not args.inline_base:
         args.inline_base = args.src
-
+    start = time.time()
     menu_content, menu_head = convert_html_to_page(os.path.join(args.src, "index.html"))
     game_content, game_head = convert_html_to_page(os.path.join(args.src, "game.html"))
     logging.info("Building menu content...")
@@ -403,7 +407,14 @@ def main():
     logging.info(f"Writing combined content to {args.output}")
     with open(args.output, "w", encoding="utf-8") as f:
         f.write(combined)
-    print(f"\033[92mSuccessfully built {args.output}\033[0m")
+    def format_time(seconds):
+        if seconds < 60:
+            return f"{seconds:.2f} seconds"
+        elif seconds < 3600:
+            return f"{seconds/60:.2f} minutes"
+        else:
+            return f"{seconds/3600:.2f} hours"
+    print(f"\033[92mSuccessfully built {args.output} in \033[1m{format_time(time.time()-start)}\033[0m")
 
 
 if __name__ == "__main__":
