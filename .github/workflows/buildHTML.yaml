@@ -34,18 +34,20 @@ jobs:
                   cp dist/index.html /tmp/index.html
             - name: Push to dist branch
               run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
                   git fetch origin dist || true
-                  git checkout dist || git checkout --orphan dist
+                  # Use -- to disambiguate branch name from dist/ directory
+                  if git rev-parse --verify origin/dist >/dev/null 2>&1; then
+                    git checkout -B dist origin/dist --
+                  else
+                    git checkout --orphan dist
+                  fi
                   # Clean the working tree
                   git rm -rf . || true
                   # Copy the built file back
                   mkdir -p dist
                   cp /tmp/index.html dist/index.html
                   git add dist/index.html
-                  git config user.name "github-actions[bot]"
-                  git config user.email "github-actions[bot]@users.noreply.github.com"
                   git commit -m "Add built files for ${{ github.event.release.tag_name || github.sha }}" || echo "No changes to commit"
                   git push origin dist
-
-            
-              
