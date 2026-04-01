@@ -4,8 +4,9 @@ const documents = {
 };
 const checksums = null//{checksums};
 const BUILD_TIME = "{build_time}";
+let storedUpdate = false;
 if (localStorage.getItem('latestUpdateTime') && new Date(localStorage.getItem('latestUpdateTime')) > new Date(BUILD_TIME)) {
-    alert('A newer version of the game is available!');
+    storedUpdate = true;
 }
 const COMPRESSION_ENABLED = false//{compression_enabled};
 if (!COMPRESSION_ENABLED) {
@@ -27,9 +28,9 @@ function executeScripts(container) {
         oldScript.parentNode.replaceChild(newScript, oldScript);
     });
 }
-let storedUpdate = false;
 const AUTO_UPDATE_URL = "{auto_update_url}";
 async function checkForUpdates() {
+    if (storedUpdate) return true;
     const indexResponse = await fetch(AUTO_UPDATE_URL, {
         headers: {
             "Accept": "application/octet-stream"
