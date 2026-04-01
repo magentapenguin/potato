@@ -74,8 +74,10 @@ async function installUpdate(force = false) {
     // Download the new 
     localStorage.setItem('latestUpdateTime', new Date().toISOString());
     const a = document.createElement('a');
-    a.href = AUTO_UPDATE_URL;
+    a.href = "https://github.com/magentapenguin/potato/releases/latest";
     a.download = 'game.html';
+    a.style.display = 'none';
+    a.target = '_blank';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -88,8 +90,8 @@ async function decompressAndDecode(data, checksum, onProgress) {
         const hashBuffer = await crypto.subtle.digest('SHA-256', compressedData);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        if (hashHex !== checksums[checksum]) {
-            throw new Error(`Checksum mismatch for ${checksum}: expected ${checksums[checksum]}, got ${hashHex}`);
+        if (hashHex !== checksum) {
+            throw new Error(`Checksum mismatch: expected ${checksum}, got ${hashHex}`);
         }
     }
     if (!COMPRESSION_ENABLED) {
@@ -119,6 +121,7 @@ function onHashChange() {
         return;
     }
     const [content, head] = documents[hash] ?? [null, null];
+    const [expectedContentChecksum, expectedHeadChecksum] = checksums?.[hash] ?? [null, null];
     if (!content || !head) {
         console.error(`No content found for hash: ${hash}`);
         document.getElementById('content').innerHTML = '<h1>404 Not Found</h1><p>The requested page could not be found.</p><a href="#/index.html" style="color:#48f">Go back to menu</a>';
@@ -127,17 +130,16 @@ function onHashChange() {
         loaderBg.style.display = 'none';
         return;
     }
-    let progress = 0;
     let headProgress = 0;
     let contentProgress = 0;
     const loading = [
-        decompressAndDecode(head, progress => {
+        decompressAndDecode(head, expectedHeadChecksum, progress => {
             headProgress = progress;
         }).then(decompressedHead => {
             document.getElementById('head-content').innerHTML = decompressedHead;
             executeScripts(document.getElementById('head-content'));
         }),
-        decompressAndDecode(content, progress => {
+        decompressAndDecode(content, expectedContentChecksum, progress => {
             contentProgress = progress;
         }).then(decompressedContent => {
             document.getElementById('content').innerHTML = decompressedContent;

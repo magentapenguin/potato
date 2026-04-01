@@ -189,10 +189,14 @@ def combine_pages(
     if checksum_enabled:
         logging.info("Calculating checksums...")
         checksums = {
-            "menu": hashlib.sha256(menu).hexdigest(),
-            "menu_head": hashlib.sha256(menu_head).hexdigest(),
-            "game": hashlib.sha256(game).hexdigest(),
-            "game_head": hashlib.sha256(game_head).hexdigest(),
+            "/index.html": [
+                hashlib.sha256(menu).hexdigest(),
+                hashlib.sha256(menu_head).hexdigest(),
+            ],
+            "/game.html": [
+                hashlib.sha256(game).hexdigest(),
+                hashlib.sha256(game_head).hexdigest(),
+            ],
         }
     else:
         checksums = None
@@ -201,10 +205,10 @@ def combine_pages(
     with open(script_path, "r", encoding="utf-8") as f:
         script = f.read()
     NAVIGATION_SCRIPT = (
-        script.replace("{menu}", menu.decode("utf-8"))
-        .replace("{menu_head}", menu_head.decode("utf-8"))
-        .replace("{game}", game.decode("utf-8"))
-        .replace("{game_head}", game_head.decode("utf-8"))
+        script.replace("{menu}", base64.b64encode(menu).decode("utf-8"))
+        .replace("{menu_head}", base64.b64encode(menu_head).decode("utf-8"))
+        .replace("{game}", base64.b64encode(game).decode("utf-8"))
+        .replace("{game_head}", base64.b64encode(game_head).decode("utf-8"))
         .replace("null//{checksums}", json.dumps(checksums))
         .replace(
             "false//{compression_enabled}", "true" if compression_enabled else "false"
@@ -274,6 +278,11 @@ def main():
         action="store_true",
         help="Disable gzip compression for embedded content (results in larger file size but faster loading)",
     )
+    parser.add_argument(
+        "--no-checksum",
+        action="store_true",
+        help="Disable checksum generation for embedded content (not recommended, reduces corruption detection)",
+    )
     args = parser.parse_args()
     if os.path.exists(args.output):
         logging.warning(
@@ -302,6 +311,7 @@ def main():
         game_content,
         game_head,
         compression_enabled=not args.no_compress,
+        checksum_enabled=not args.no_checksum,
         script_path=os.path.join(args.src, args.nav_script),
     )
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
