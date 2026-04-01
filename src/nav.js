@@ -5,19 +5,7 @@ let documents = {
 };
 const BUILD_TIME = "{build_time}";
 if (localStorage.getItem('latestUpdateTime') && new Date(localStorage.getItem('latestUpdateTime')) > new Date(BUILD_TIME)) {
-    console.log('Using cached update from localStorage');
-    if (localStorage.getItem('latestMenu') && localStorage.getItem('latestMenuHead')) {
-        documents['/index.html'] = [localStorage.getItem('latestMenu'), localStorage.getItem('latestMenuHead')];
-    }
-    if (localStorage.getItem('latestGame') && localStorage.getItem('latestGameHead')) {
-        documents['/game.html'] = [localStorage.getItem('latestGame'), localStorage.getItem('latestGameHead')];
-    }
-} else {
-    localStorage.removeItem('latestMenu');
-    localStorage.removeItem('latestMenuHead');
-    localStorage.removeItem('latestGame');
-    localStorage.removeItem('latestGameHead');
-    localStorage.removeItem('latestUpdateTime');
+    alert('A newer version of the game is available!');
 }
 const COMPRESSION_ENABLED = false//{compression_enabled};
 if (!COMPRESSION_ENABLED) {
@@ -39,9 +27,10 @@ function executeScripts(container) {
         oldScript.parentNode.replaceChild(newScript, oldScript);
     });
 }
-let storedUpdate = null;
+let storedUpdate = false;
+const AUTO_UPDATE_URL = "{auto_update_url}";
 async function checkForUpdates() {
-    const indexResponse = await fetch("{AUTO_UPDATE_URL}", {
+    const indexResponse = await fetch(AUTO_UPDATE_URL, {
         headers: {
             "Accept": "application/octet-stream"
         },
@@ -61,12 +50,12 @@ async function checkForUpdates() {
                 newMenu !== documents['/index.html'][0] || newGame !== documents['/game.html'][0] ||
                 newMenuHead !== documents['/index.html'][1] || newGameHead !== documents['/game.html'][1]
             ) {
-                storedUpdate = [[newMenu, newMenuHead], [newGame, newGameHead]];
+                storedUpdate = true;
                 console.log('%cUpdate available!', 'color: #48f; font-size: 16px; font-weight: bold;');
                 eventListeners['update-available']?.forEach(callback => callback());
                 return true;
             } else {
-                storedUpdate = null;
+                storedUpdate = false;
                 return false;
             }
         } else {
@@ -82,15 +71,14 @@ async function installUpdate(reload = true) {
         console.warn('No update downloaded yet');
         return false;
     }
-    const [[newMenu, newMenuHead], [newGame, newGameHead]] = storedUpdate;
-    documents['/index.html'] = [newMenu, newMenuHead];
-    documents['/game.html'] = [newGame, newGameHead];
-    localStorage.setItem('latestMenu', newMenu);
-    localStorage.setItem('latestMenuHead', newMenuHead);
-    localStorage.setItem('latestGame', newGame);
-    localStorage.setItem('latestGameHead', newGameHead);
+    // Download the new 
     localStorage.setItem('latestUpdateTime', new Date().toISOString());
-    if (reload) location.reload();
+    const a = document.createElement('a');
+    a.href = AUTO_UPDATE_URL;
+    a.download = 'game.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     return true;
 }
 async function decompressAndDecode(data, onProgress) {
@@ -265,14 +253,6 @@ window.updateManager = {
             const notification = document.createElement('update-notification');
             document.body.appendChild(notification);
         }
-    },
-    clearUpdates: () => {
-        localStorage.removeItem('latestMenu');
-        localStorage.removeItem('latestMenuHead');
-        localStorage.removeItem('latestGame');
-        localStorage.removeItem('latestGameHead');
-        localStorage.removeItem('latestUpdateTime');
-        location.reload();
     },
     get updateAvailable() {
         return storedUpdate;
