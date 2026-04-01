@@ -1,4 +1,5 @@
 # Compresses the game into a single html file for distribution
+import json, hashlib
 import os, bs4, re
 import base64, gzip
 import mimetypes
@@ -168,37 +169,46 @@ def combine_pages(
     *,
     compression_enabled=True,
     script_path="src/nav.js",
+    checksum_enabled=False,
 ):
     if compression_enabled:
         logging.info("Compressing menu content...")
-        menu = base64.b64encode(gzip.compress(menu.encode("utf-8"))).decode("utf-8")
+        menu = gzip.compress(menu.encode("utf-8"))
         logging.info("Compressing menu head...")
-        menu_head = base64.b64encode(gzip.compress(menu_head.encode("utf-8"))).decode(
-            "utf-8"
-        )
+        menu_head = gzip.compress(menu_head.encode("utf-8"))
         logging.info("Compressing game content...")
-        game = base64.b64encode(gzip.compress(game.encode("utf-8"))).decode("utf-8")
+        game = gzip.compress(game.encode("utf-8"))
         logging.info("Compressing game head...")
-        game_head = base64.b64encode(gzip.compress(game_head.encode("utf-8"))).decode(
-            "utf-8"
-        )
+        game_head = gzip.compress(game_head.encode("utf-8"))
     else:
         logging.warning("Skipping compression as per options")
-        menu = base64.b64encode(menu.encode("utf-8")).decode("utf-8")
-        menu_head = base64.b64encode(menu_head.encode("utf-8")).decode("utf-8")
-        game = base64.b64encode(game.encode("utf-8")).decode("utf-8")
-        game_head = base64.b64encode(game_head.encode("utf-8")).decode("utf-8")
+        menu = menu.encode("utf-8")
+        menu_head = menu_head.encode("utf-8")
+        game = game.encode("utf-8")
+        game_head = game_head.encode("utf-8")
+    if checksum_enabled:
+        logging.info("Calculating checksums...")
+        checksums = {
+            "menu": hashlib.sha256(menu).hexdigest(),
+            "menu_head": hashlib.sha256(menu_head).hexdigest(),
+            "game": hashlib.sha256(game).hexdigest(),
+            "game_head": hashlib.sha256(game_head).hexdigest(),
+        }
+    else:
+        checksums = None
+        logging.warning("Skipping checksums as per options")
+
     with open(script_path, "r", encoding="utf-8") as f:
         script = f.read()
     NAVIGATION_SCRIPT = (
-        script
+        script.replace("{menu}", menu.decode("utf-8"))
+        .replace("{menu_head}", menu_head.decode("utf-8"))
+        .replace("{game}", game.decode("utf-8"))
+        .replace("{game_head}", game_head.decode("utf-8"))
+        .replace("null//{checksums}", json.dumps(checksums))
         .replace(
-            "{menu}", menu
+            "false//{compression_enabled}", "true" if compression_enabled else "false"
         )
-        .replace("{menu_head}", menu_head)
-        .replace("{game}", game)
-        .replace("{game_head}", game_head)
-        .replace("false//{compression_enabled}", "true" if compression_enabled else "false")
         .replace(
             "{auto_update_url}",
             "https://raw.githubusercontent.com/magentapenguin/potato/refs/heads/dist/dist/index.html",
@@ -244,10 +254,16 @@ def main():
         "--verbose", "-v", action="store_true", help="Enable verbose debug output"
     )
     parser.add_argument(
-        "--src", "-s", default="src", help="Source directory containing HTML files and navigation script"
+        "--src",
+        "-s",
+        default="src",
+        help="Source directory containing HTML files and navigation script",
     )
     parser.add_argument(
-        "--nav-script", "--nav", default="nav.js", help="Path to the navigation script to embed"
+        "--nav-script",
+        "--nav",
+        default="nav.js",
+        help="Path to the navigation script to embed",
     )
     parser.add_argument(
         "--inline-base",
@@ -286,7 +302,7 @@ def main():
         game_content,
         game_head,
         compression_enabled=not args.no_compress,
-        script_path=os.path.join(args.src, args.nav_script)
+        script_path=os.path.join(args.src, args.nav_script),
     )
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
     logging.info(f"Writing combined content to {args.output}")

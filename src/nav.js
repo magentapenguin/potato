@@ -1,8 +1,8 @@
-
-let documents = {
+const documents = {
     '/index.html': ["{menu}", "{menu_head}"],
     '/game.html': ["{game}", "{game_head}"]
 };
+const checksums = null//{checksums};
 const BUILD_TIME = "{build_time}";
 if (localStorage.getItem('latestUpdateTime') && new Date(localStorage.getItem('latestUpdateTime')) > new Date(BUILD_TIME)) {
     alert('A newer version of the game is available!');
@@ -65,9 +65,9 @@ async function checkForUpdates() {
         throw new Error('Failed to parse updated content: documents variable not found');
     }
 }
-async function installUpdate(reload = true) {
-    if (!COMPRESSION_ENABLED) return false;
-    if (!storedUpdate) {
+async function installUpdate(force = false) {
+    if (!COMPRESSION_ENABLED && !force) return false;
+    if (!storedUpdate && !force) {
         console.warn('No update downloaded yet');
         return false;
     }
@@ -81,8 +81,17 @@ async function installUpdate(reload = true) {
     document.body.removeChild(a);
     return true;
 }
-async function decompressAndDecode(data, onProgress) {
+async function decompressAndDecode(data, checksum, onProgress) {
     const compressedData = Uint8Array.fromBase64(data);
+    // Verify checksum if available
+    if (checksum && checksums) {
+        const hashBuffer = await crypto.subtle.digest('SHA-256', compressedData);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        if (hashHex !== checksums[checksum]) {
+            throw new Error(`Checksum mismatch for ${checksum}: expected ${checksums[checksum]}, got ${hashHex}`);
+        }
+    }
     if (!COMPRESSION_ENABLED) {
         return new TextDecoder().decode(compressedData);
     }
@@ -162,6 +171,12 @@ function onHashChange() {
         loaderBg.style.display = 'none';
     }).catch((err) => {
         console.error('Error loading content:', err);
+        if (err instanceof Error) {
+            if (err.message.includes('Checksum mismatch')) {
+                confirm('Corrupted content detected. This may be due to a failed update download. Would you like to try downloading the update again?') && installUpdate(true);
+                return;
+            }
+        }
         alert('An error occurred while loading the page. Please try refreshing or check the console for details.');
     });
 }

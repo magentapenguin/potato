@@ -1007,7 +1007,7 @@ function shop() {
     document.getElementById('shop').showModal();
     const items = [
         { name: 'Extra Key', desc: 'Gives you an extra key', cost: 25, effect: () => player.inventory.key++ },
-        { name: 'Compass', desc: 'Displays a compass at the top of the screen', count: 1, cost: 2, effect: null }, // happens in rendering
+        { name: 'Compass', desc: 'Displays a compass at the top of the screen', count: 1, cost: 2, effect: null },
         { name: 'Keyfinder', desc: 'Shows the direction of the key', count: 1, cost: 15, effect: null, requires: ['Compass'] },
         { name: 'Coin Radar', desc: 'Shows how many coins are on the current map', count: 1, cost: 10, effect: null },
         { name: 'Exit Tracker', desc: 'Shows the direction of the exit', count: 1, cost: 20, effect: null, requires: ['Compass'] },
@@ -1015,7 +1015,7 @@ function shop() {
         { name: 'Fog Detector', desc: 'Shows where undiscovered areas are on the minimap as red squares', count: 1, cost: 5, requires: ['Minimap'] },
         { name: 'Player Positioning', desc: 'Shows where you are on the minimap as a red square', count: 1, cost: 15, requires: ['Minimap'] },
         { name: 'Surround Scan', desc: 'Upgrades the minimap to reveal a 5x5 area around you', cost: 45, count: 1, requires: ['Minimap'] },
-        { name: 'Compass Integration', desc: 'Upgrades the minimap to show the information from the compass', cost: 30, count: 1, requires: ['Minimap', 'Compass'] },
+        { name: 'Compass Integration', desc: 'Upgrades the minimap to show the information from the compass', cost: 30, count: 1, requires: ['Minimap', 'Compass', 'Player Positioning'] },
         { name: 'Speed Boost', desc: 'Increases your movement speed', cost: 15, count: 3, effect: () => player.speedBoost += 0.5 },
     ];
     const updateShop = () => {
