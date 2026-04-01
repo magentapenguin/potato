@@ -200,7 +200,7 @@ def combine_pages(
         .replace("{game_head}", game_head)
         .replace("false//{compression_enabled}", "true" if compression_enabled else "false")
         .replace(
-            "{AUTO_UPDATE_URL}",
+            "{auto_update_url}",
             "https://raw.githubusercontent.com/magentapenguin/potato/refs/heads/dist/dist/index.html",
         )
         .replace("{build_time}", datetime.datetime.now().isoformat())
