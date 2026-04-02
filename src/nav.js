@@ -3,11 +3,6 @@ const documents = {
     '/game.html': ["{game}", "{game_head}"]
 };
 const checksums = null//{checksums};
-const BUILD_TIME = "{build_time}";
-let storedUpdate = false;
-if (localStorage.getItem('latestUpdateTime') && new Date(localStorage.getItem('latestUpdateTime')) > new Date(BUILD_TIME)) {
-    storedUpdate = true;
-}
 const COMPRESSION_ENABLED = false//{compression_enabled};
 if (!COMPRESSION_ENABLED) {
     console.warn('No compression, will not auto-update');
@@ -27,61 +22,6 @@ function executeScripts(container) {
         }
         oldScript.parentNode.replaceChild(newScript, oldScript);
     });
-}
-const AUTO_UPDATE_URL = "{auto_update_url}";
-async function checkForUpdates() {
-    if (storedUpdate) return true;
-    const indexResponse = await fetch(AUTO_UPDATE_URL, {
-        headers: {
-            "Accept": "application/octet-stream"
-        },
-        // Allow redirects in case the asset URL is a redirect (e.g. GitHub's CDN)
-        redirect: "follow",
-        cors: "cors"
-    });
-    if (!indexResponse.ok) {
-        throw new Error(`Failed to download update: ${indexResponse.status} ${indexResponse.statusText}`);
-    }
-    const updatedContent = await indexResponse.text();
-    const match = /<script>\s*(let|const) documents = {\s*'\/index\.html':\s*\["(.*?)", "(.*?)"\],\s*'\/game\.html':\s*\["(.*?)", "(.*?)"\]/gm.exec(updatedContent);
-    if (match) {
-        const [_, __, newMenu, newMenuHead, newGame, newGameHead] = match;
-        if (newMenu && newMenuHead && newGame && newGameHead) {
-            if (
-                newMenu !== documents['/index.html'][0] || newGame !== documents['/game.html'][0] ||
-                newMenuHead !== documents['/index.html'][1] || newGameHead !== documents['/game.html'][1]
-            ) {
-                storedUpdate = true;
-                console.log('%cUpdate available!', 'color: #48f; font-size: 16px; font-weight: bold;');
-                eventListeners['update-available']?.forEach(callback => callback());
-                return true;
-            } else {
-                storedUpdate = false;
-                return false;
-            }
-        } else {
-            throw new Error('Failed to parse updated content: documents variable not found');
-        }
-    } else {
-        throw new Error('Failed to parse updated content: documents variable not found');
-    }
-}
-async function installUpdate(force = false) {
-    if (!COMPRESSION_ENABLED && !force) return false;
-    if (!storedUpdate && !force) {
-        console.warn('No update downloaded yet');
-        return false;
-    }
-    // Download the new 
-    localStorage.setItem('latestUpdateTime', new Date().toISOString());
-    const a = document.createElement('a');
-    a.href = "https://github.com/magentapenguin/potato/releases/latest";
-    a.style.display = 'none';
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    return true;
 }
 async function decompressAndDecode(data, checksum, onProgress) {
     const compressedData = Uint8Array.fromBase64(data);
@@ -175,7 +115,7 @@ function onHashChange() {
         console.error('Error loading content:', err);
         if (err instanceof Error) {
             if (err.message.includes('Checksum mismatch')) {
-                confirm('Corrupted content detected. This may be due to a failed update download. Would you like to try downloading the update again?') && installUpdate(true);
+                confirm('Corrupted content detected.')
                 return;
             }
         }
@@ -204,89 +144,3 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(loader);
     document.body.appendChild(loaderBg);
 });
-let eventListeners = {
-    'update-available': [],
-};
-class UpdateNotification extends HTMLElement {
-    constructor() {
-        super();
-        this.attachShadow({ mode: 'open' });
-        const style = document.createElement('style');
-        style.textContent = `
-            .update-notification {
-                position: fixed;
-                bottom: 20px;
-                left: 50%;
-                width: max-content;
-                transform: translateX(-50%);
-                background-color: #111;
-                border: 1px #222 solid;
-                color: #eee;
-                padding: 10px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-                display: flex;
-                align-items: center;
-                flex-direction: column;
-                gap: 5px;
-                font: 18px sans-serif;
-                z-index: 10000;
-                animation: slideIn 0.5s ease-out;
-            }
-            .update-notification button {
-                display: inline-block;
-                padding: 5px 10px;
-                background-color: #0a635444;
-                border: none;
-                color: #5fa;
-                border-radius: 5px;
-                cursor: pointer;
-                font: inherit;
-                font-size: 16px;
-                width: 100%;
-            }
-            .update-notification button:hover {
-                background-color: #0b7e7066;
-            }
-            @keyframes slideIn {
-                from {
-                    transform: translate(-50%, 100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translate(-50%, 0);
-                    opacity: 1;
-                }         
-            }
-        `;
-        this.shadowRoot.appendChild(style);
-        this.container = document.createElement('div');
-        this.container.className = 'update-notification';
-        this.container.innerHTML = `
-            <span>A new update is available!</span>
-            <button id="update-button">Update Now</button>
-        `;
-        this.shadowRoot.appendChild(this.container);
-        this.container.querySelector('#update-button').addEventListener('click', () => {
-            installUpdate();
-        });
-    }
-}
-customElements.define('update-notification', UpdateNotification);
-window.updateManager = {
-    checkForUpdates,
-    installUpdate,
-    showUpdateNotification() {
-        if (!document.querySelector('update-notification')) {
-            const notification = document.createElement('update-notification');
-            document.body.appendChild(notification);
-        }
-    },
-    get updateAvailable() {
-        return storedUpdate;
-    },
-    on(event, callback) {
-        if (!eventListeners[event]) throw new Error(`Unsupported event: ${event}`);
-        eventListeners[event].push(callback);
-    },
-};

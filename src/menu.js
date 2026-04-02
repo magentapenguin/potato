@@ -78,12 +78,6 @@ setInterval(() => {
 bc.postMessage('tabs_open');
 
 
-if (window.updateManager) {
-    updateManager.on('update-available', () => {
-        updateManager.showUpdateNotification();
-    });
-    updateManager.checkForUpdates();
-}
 
 function updateSaveList(updateOtherTabs = true) {
     if (updateOtherTabs) bc.postMessage('update_saves');

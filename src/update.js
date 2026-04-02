@@ -1,6 +1,3 @@
-
-
-
 class UpdateNotification extends HTMLElement {
     constructor() {
         super();
@@ -100,6 +97,7 @@ class UpdateNotification extends HTMLElement {
         const update = await window.__TAURI__.updater.check();
         if (update) {
             this.update = update;
+            console.log('Update available:', update);
             this.style.display = 'block';
         } else {
             this.style.display = 'none';

@@ -61,12 +61,6 @@ bc.addEventListener("message", (event) => {
     }
 });
 
-if (window.updateManager) {
-    updateManager.on('update-available', () => {
-        updateManager.showUpdateNotification();
-    });
-    updateManager.checkForUpdates();
-}
 
 let currentMusic = null;
 
