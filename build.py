@@ -314,7 +314,8 @@ def main():
         checksum_enabled=not args.no_checksum,
         script_path=os.path.join(args.src, args.nav_script),
     )
-    os.makedirs(os.path.dirname(args.output), exist_ok=True)
+    if os.path.dirname(args.output):
+        os.makedirs(os.path.dirname(args.output), exist_ok=True)
     logging.info(f"Writing combined content to {args.output}")
     with open(args.output, "w", encoding="utf-8") as f:
         f.write(combined)

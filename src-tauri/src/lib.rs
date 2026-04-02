@@ -26,25 +26,5 @@ pub fn run() {
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
-  if let Some(update) = app.updater()?.check().await? {
-    let mut downloaded = 0;
-
-    // alternatively we could also call update.download() and update.install() separately
-    update
-      .download_and_install(
-        |chunk_length, content_length| {
-          downloaded += chunk_length;
-          log::info!("downloaded {downloaded} from {content_length:?}");
-        },
-        || {
-          log::info!("download finished");
-        },
-      )
-      .await?;
-
-    log::info!("update installed");
-    app.restart();
-  }
-
   Ok(())
 }

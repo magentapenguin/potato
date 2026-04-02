@@ -76,7 +76,6 @@ async function installUpdate(force = false) {
     localStorage.setItem('latestUpdateTime', new Date().toISOString());
     const a = document.createElement('a');
     a.href = "https://github.com/magentapenguin/potato/releases/latest";
-    a.download = 'game.html';
     a.style.display = 'none';
     a.target = '_blank';
     document.body.appendChild(a);
@@ -232,6 +231,7 @@ class UpdateNotification extends HTMLElement {
                 gap: 5px;
                 font: 18px sans-serif;
                 z-index: 10000;
+                animation: slideIn 0.5s ease-out;
             }
             .update-notification button {
                 display: inline-block;
@@ -247,6 +247,16 @@ class UpdateNotification extends HTMLElement {
             }
             .update-notification button:hover {
                 background-color: #0b7e7066;
+            }
+            @keyframes slideIn {
+                from {
+                    transform: translate(-50%, 100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translate(-50%, 0);
+                    opacity: 1;
+                }         
             }
         `;
         this.shadowRoot.appendChild(style);
