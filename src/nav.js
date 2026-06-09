@@ -4,9 +4,6 @@ const documents = {
 };
 const checksums = null//{checksums};
 const COMPRESSION_ENABLED = false//{compression_enabled};
-if (!COMPRESSION_ENABLED) {
-    console.warn('No compression, will not auto-update');
-}
 function executeScripts(container) {
     const scripts = container.querySelectorAll('script');
     scripts.forEach(oldScript => {

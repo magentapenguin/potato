@@ -1331,6 +1331,12 @@ function update(deltaTime) {
     if (doorHits && player.inventory.key > 0) {
         player.inventory.key -= 1;
         player.level++;
+        if (player.level > 1) {
+            const timeBonus = Math.max(0, 30 - (performance.now() - levelLoadTime) / 1000);
+            coinSpeedBonus = Math.floor(timeBonus / 5);
+            console.log(`Level completed in ${(performance.now() - levelLoadTime) / 1000}s! Time bonus: ${timeBonus.toFixed(2)}s, Speed bonus: ${coinSpeedBonus}`); /* remove-in-build */
+            player.inventory.coins += coinSpeedBonus;
+        }
         // shop every 3 levels
         if (player.level % 3 === 0) {
             shop().then(() => {
@@ -1342,6 +1348,8 @@ function update(deltaTime) {
     }
 }
 let lastUpdate = performance.now();
+let levelLoadTime = performance.now();
+let coinSpeedBonus = 0;
 const gameLoop = () => {
     const now = performance.now();
     const deltaTime = (now - lastUpdate) / 1000;

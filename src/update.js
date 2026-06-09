@@ -1,6 +1,11 @@
 class UpdateNotification extends HTMLElement {
     constructor() {
         super();
+        if (!window.__TAURI__ || !window.__TAURI__?.updater) {
+            console.warn('Tauri updater API not available, update notifications will be disabled');
+            this.style.display = 'none';
+            return;
+        }
         this.update = null;
         this.attachShadow({ mode: 'open' });
         const style = document.createElement('style');
