@@ -183,6 +183,11 @@ loadTexture('coin.png', true).then(({ data, image }) => { /* inline-content 'coi
     coinTextureData = data;
 });
 
+let floorTextureData = null;
+loadTexture('floor.png').then((data) => { /* inline-content 'floor.png' file: floor.png */
+    floorTextureData = data;
+});
+
 
 const currentSaveVersion = 2;
 
@@ -567,19 +572,22 @@ function raycast(x, y, angle, options = {}) {
     }
 
     let distance = 0;
+    let side = 0; // 0 = X-axis wall face hit (E/W), 1 = Y-axis wall face hit (N/S)
     while (distance < maxDistance) {
         if (sideDistX < sideDistY) {
             distance = sideDistX;
             sideDistX += deltaDistX;
             mapX += stepX;
+            side = 0;
         } else {
             distance = sideDistY;
             sideDistY += deltaDistY;
             mapY += stepY;
+            side = 1;
         }
 
         if (distance >= maxDistance) {
-            return [maxDistance, null];
+            return [maxDistance, null, side];
         }
 
         if (
@@ -588,16 +596,16 @@ function raycast(x, y, angle, options = {}) {
             mapX < 0 ||
             mapX >= level[mapY].length
         ) {
-            return [maxDistance, null];
+            return [maxDistance, null, side];
         }
 
         const cell = level[mapY][mapX];
         if (cell && check(cell, mapX + 0.5, mapY + 0.5, distance) && !ignore.includes(cell)) {
-            return [distance, cell];
+            return [distance, cell, side];
         }
     }
 
-    return [maxDistance, null];
+    return [maxDistance, null, side];
 }
 
 // Use cached sprites instead of scanning level every frame
@@ -658,7 +666,7 @@ function renderSprites(pixels, depthBuffer, playerX, playerY, playerAngle) {
 
         const texWidth = textureData.width;
         const texHeight = textureData.height;
-        const brightness = Math.max(0, 1 - sprite.dist / 10);
+        const brightness = Math.max(0.08, 1 - sprite.dist / 14);
 
         for (let sx = Math.max(0, startX); sx < Math.min(canvas.width, endX); sx++) {
             // Depth test: only draw if sprite is closer than wall at this column
@@ -690,31 +698,81 @@ function observe(x, y) {
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = 'blue';
-    ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
-
     const playerX = player.x;
     const playerY = player.y;
     const playerAngle = player.angle;
 
-    const raycastResults = [];
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const pixels = imageData.data;
     const depthBuffer = new Float32Array(canvas.width).fill(Infinity);
 
+    // Floor and ceiling casting
+    const fov = Math.PI / 3;
+    const rayDirX0 = Math.cos(playerAngle - fov / 2);
+    const rayDirY0 = Math.sin(playerAngle - fov / 2);
+    const rayDirX1 = Math.cos(playerAngle + fov / 2);
+    const rayDirY1 = Math.sin(playerAngle + fov / 2);
+    const halfH = canvas.height / 2;
+
+    for (let row = Math.floor(halfH) + 1; row < canvas.height; row++) {
+        const p = row - halfH;
+        const rowDistance = halfH / p;
+
+        const floorStepX = rowDistance * (rayDirX1 - rayDirX0) / canvas.width;
+        const floorStepY = rowDistance * (rayDirY1 - rayDirY0) / canvas.width;
+
+        let floorX = playerX + rowDistance * rayDirX0;
+        let floorY = playerY + rowDistance * rayDirY0;
+
+        const floorBrightness = Math.max(0.05, 1 - rowDistance / 14);
+        const ceilRow = canvas.height - row - 1;
+
+        for (let x = 0; x < canvas.width; x++) {
+            const pixFloor = (row * canvas.width + x) * 4;
+            const pixCeil = (ceilRow * canvas.width + x) * 4;
+
+            // Floor
+            if (floorTextureData) {
+                const texW = floorTextureData.width;
+                const texH = floorTextureData.height;
+                const texX = Math.floor((floorX - Math.floor(floorX)) * texW) & (texW - 1);
+                const texY = Math.floor((floorY - Math.floor(floorY)) * texH) & (texH - 1);
+                const texIdx = (texY * texW + texX) * 4;
+                pixels[pixFloor] = floorTextureData.data[texIdx] * floorBrightness;
+                pixels[pixFloor + 1] = floorTextureData.data[texIdx + 1] * floorBrightness;
+                pixels[pixFloor + 2] = floorTextureData.data[texIdx + 2] * floorBrightness;
+                pixels[pixFloor + 3] = 255;
+            } else {
+                const v = Math.floor(50 * floorBrightness);
+                pixels[pixFloor] = v;
+                pixels[pixFloor + 1] = v;
+                pixels[pixFloor + 2] = v;
+                pixels[pixFloor + 3] = 255;
+            }
+
+            // Ceiling (darker blue-grey tint, mirrored row)
+            const ceilBrightness = Math.max(0.03, 1 - rowDistance / 14) * 0.55;
+            pixels[pixCeil] = Math.floor(20 * ceilBrightness);
+            pixels[pixCeil + 1] = Math.floor(20 * ceilBrightness);
+            pixels[pixCeil + 2] = Math.floor(55 * ceilBrightness);
+            pixels[pixCeil + 3] = 255;
+
+            floorX += floorStepX;
+            floorY += floorStepY;
+        }
+    }
 
     for (let x = 0; x < canvas.width; x++) {
-        const rayAngle = playerAngle + ((x / canvas.width) - 0.5) * (Math.PI / 3);
+        const rayAngle = playerAngle + ((x / canvas.width) - 0.5) * fov;
         const rayX = playerX;
         const rayY = playerY;
-        const [distance, object] = raycast(rayX, rayY, rayAngle, {
+        const [distance, object, side] = raycast(rayX, rayY, rayAngle, {
             ignore: " @.*", check: (obj, x, y, dist) => {
                 // Mark observed cells for minimap
                 observe(x, y);
                 return true;
             }
         });
-        raycastResults.push([rayAngle, distance, rayX, rayY]);
 
         // Fix fisheye distortion by using perpendicular distance
         const correctedDistance = distance * Math.cos(rayAngle - playerAngle);
@@ -733,19 +791,13 @@ function render() {
         const fractX = rayHitX - hitGridX;
         const fractY = rayHitY - hitGridY;
 
-        // Determine wall face by closest edge
-        const distToLeft = fractX;
-        const distToRight = 1 - fractX;
-        const distToTop = fractY;
-        const distToBottom = 1 - fractY;
-        const minDist = Math.min(distToLeft, distToRight, distToTop, distToBottom);
+        // Use DDA side info for accurate wall texture X coordinate
+        // side=0: ray hit E/W face (vertical), texture maps along Y axis
+        // side=1: ray hit N/S face (horizontal), texture maps along X axis
+        const wallHitOffset = side === 0 ? fractY : fractX;
 
-        let wallHitOffset;
-        if (minDist === distToLeft || minDist === distToRight) {
-            wallHitOffset = fractY;
-        } else {
-            wallHitOffset = fractX;
-        }
+        // Directional shading: E/W walls slightly darker to enhance depth perception
+        const dirShading = side === 0 ? 0.7 : 1.0;
 
         const drawStart = Math.max(0, Math.floor((canvas.height - wallHeight) / 2));
         const drawEnd = Math.min(canvas.height - 1, Math.floor((canvas.height + wallHeight) / 2));
@@ -754,7 +806,7 @@ function render() {
             const texWidth = doorTextureData.width;
             const texHeight = doorTextureData.height;
             const texX = Math.floor(wallHitOffset * texWidth) % texWidth;
-            const brightness = Math.max(0, 1 - distance / 10);
+            const brightness = Math.max(0.08, 1 - distance / 14) * dirShading;
 
             for (let y = drawStart; y <= drawEnd; y++) {
                 // Map screen Y to texture Y
@@ -773,7 +825,7 @@ function render() {
             const texWidth = entranceTextureData.width;
             const texHeight = entranceTextureData.height;
             const texX = Math.floor(wallHitOffset * texWidth) % texWidth;
-            const brightness = Math.max(0, 1 - distance / 10);
+            const brightness = Math.max(0.08, 1 - distance / 14) * dirShading;
 
             for (let y = drawStart; y <= drawEnd; y++) {
                 // Map screen Y to texture Y
@@ -794,7 +846,7 @@ function render() {
                 const texWidth = wallTextureData.width;
                 const texHeight = wallTextureData.height;
                 const texX = Math.floor(wallHitOffset * texWidth) % texWidth;
-                const brightness = Math.max(0, 1 - distance / 10);
+                const brightness = Math.max(0.08, 1 - distance / 14) * dirShading;
 
                 for (let y = drawStart; y <= drawEnd; y++) {
                     // Map screen Y to texture Y
@@ -811,7 +863,7 @@ function render() {
                 }
             }
         } else {
-            const grey = Math.max(0, 255 - distance * 50);
+            const grey = Math.max(20, 255 - distance * 30) * dirShading;
             for (let y = drawStart; y <= drawEnd; y++) {
                 const pixIdx = (y * canvas.width + x) * 4;
                 pixels[pixIdx] = grey;
@@ -828,9 +880,9 @@ function render() {
     ctx.putImageData(imageData, 0, 0);
 
     // Vignette effect
-    const gradient = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, canvas.width / 2 * 0.7, canvas.width / 2, canvas.height / 2, canvas.width / 2);
+    const gradient = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, canvas.width / 2 * 0.6, canvas.width / 2, canvas.height / 2, canvas.width / 2);
     gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.1)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
