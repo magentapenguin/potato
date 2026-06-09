@@ -666,7 +666,7 @@ function renderSprites(pixels, depthBuffer, playerX, playerY, playerAngle) {
 
         const texWidth = textureData.width;
         const texHeight = textureData.height;
-        const brightness = Math.max(0.08, 1 - sprite.dist / 14);
+        const brightness = Math.max(0.08, 1 - sprite.dist / LIGHTING_FALLOFF_DISTANCE);
 
         for (let sx = Math.max(0, startX); sx < Math.min(canvas.width, endX); sx++) {
             // Depth test: only draw if sprite is closer than wall at this column
@@ -694,6 +694,9 @@ function renderSprites(pixels, depthBuffer, playerX, playerY, playerAngle) {
 function observe(x, y) {
     player.observedCells.add(`${Math.floor(x)},${Math.floor(y)}`);
 }
+
+// Distance at which surfaces fade to their minimum brightness (used for walls, floor, sprites)
+const LIGHTING_FALLOFF_DISTANCE = 14;
 
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -724,7 +727,7 @@ function render() {
         let floorX = playerX + rowDistance * rayDirX0;
         let floorY = playerY + rowDistance * rayDirY0;
 
-        const floorBrightness = Math.max(0.05, 1 - rowDistance / 14);
+        const floorBrightness = Math.max(0.05, 1 - rowDistance / LIGHTING_FALLOFF_DISTANCE);
         const ceilRow = canvas.height - row - 1;
 
         for (let x = 0; x < canvas.width; x++) {
@@ -735,8 +738,8 @@ function render() {
             if (floorTextureData) {
                 const texW = floorTextureData.width;
                 const texH = floorTextureData.height;
-                const texX = Math.floor((floorX - Math.floor(floorX)) * texW) & (texW - 1);
-                const texY = Math.floor((floorY - Math.floor(floorY)) * texH) & (texH - 1);
+                const texX = Math.floor((floorX - Math.floor(floorX)) * texW) % texW;
+                const texY = Math.floor((floorY - Math.floor(floorY)) * texH) % texH;
                 const texIdx = (texY * texW + texX) * 4;
                 pixels[pixFloor] = floorTextureData.data[texIdx] * floorBrightness;
                 pixels[pixFloor + 1] = floorTextureData.data[texIdx + 1] * floorBrightness;
@@ -751,7 +754,7 @@ function render() {
             }
 
             // Ceiling (darker blue-grey tint, mirrored row)
-            const ceilBrightness = Math.max(0.03, 1 - rowDistance / 14) * 0.55;
+            const ceilBrightness = Math.max(0.03, 1 - rowDistance / LIGHTING_FALLOFF_DISTANCE) * 0.55;
             pixels[pixCeil] = Math.floor(20 * ceilBrightness);
             pixels[pixCeil + 1] = Math.floor(20 * ceilBrightness);
             pixels[pixCeil + 2] = Math.floor(55 * ceilBrightness);
@@ -806,7 +809,7 @@ function render() {
             const texWidth = doorTextureData.width;
             const texHeight = doorTextureData.height;
             const texX = Math.floor(wallHitOffset * texWidth) % texWidth;
-            const brightness = Math.max(0.08, 1 - distance / 14) * dirShading;
+            const brightness = Math.max(0.08, 1 - distance / LIGHTING_FALLOFF_DISTANCE) * dirShading;
 
             for (let y = drawStart; y <= drawEnd; y++) {
                 // Map screen Y to texture Y
@@ -825,7 +828,7 @@ function render() {
             const texWidth = entranceTextureData.width;
             const texHeight = entranceTextureData.height;
             const texX = Math.floor(wallHitOffset * texWidth) % texWidth;
-            const brightness = Math.max(0.08, 1 - distance / 14) * dirShading;
+            const brightness = Math.max(0.08, 1 - distance / LIGHTING_FALLOFF_DISTANCE) * dirShading;
 
             for (let y = drawStart; y <= drawEnd; y++) {
                 // Map screen Y to texture Y
@@ -846,7 +849,7 @@ function render() {
                 const texWidth = wallTextureData.width;
                 const texHeight = wallTextureData.height;
                 const texX = Math.floor(wallHitOffset * texWidth) % texWidth;
-                const brightness = Math.max(0.08, 1 - distance / 14) * dirShading;
+                const brightness = Math.max(0.08, 1 - distance / LIGHTING_FALLOFF_DISTANCE) * dirShading;
 
                 for (let y = drawStart; y <= drawEnd; y++) {
                     // Map screen Y to texture Y
